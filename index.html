@@ -94,7 +94,14 @@
       <span class="panel-title">Map &amp; Navigation</span>
       <span class="panel-badge">/robot/map</span>
     </div>
-    <div id="nav2dmap"></div>
+    <div style="position:relative;">
+      <div id="nav2dmap"></div>
+      <div style="position:absolute;top:10px;right:10px;display:flex;flex-direction:column;gap:4px;z-index:10;">
+        <button onclick="zoomMap(1.3)" style="width:32px;height:32px;background:rgba(0,229,255,0.1);border:1px solid var(--accent);color:var(--accent);font-size:18px;cursor:pointer;border-radius:2px;line-height:1;">+</button>
+        <button onclick="zoomMap(1/1.3)" style="width:32px;height:32px;background:rgba(0,229,255,0.1);border:1px solid var(--accent);color:var(--accent);font-size:18px;cursor:pointer;border-radius:2px;line-height:1;">&#8722;</button>
+        <button onclick="centerMap()" title="Center on robot" style="width:32px;height:32px;background:rgba(0,229,255,0.1);border:1px solid var(--accent);color:var(--accent);font-size:13px;cursor:pointer;border-radius:2px;line-height:1;">&#8857;</button>
+      </div>
+    </div>
     <div class="map-controls">
       <button class="mode-btn active" id="btn-goal"     onclick="setMode('goal')">Set Goal</button>
       <button class="mode-btn"        id="btn-initpose" onclick="setMode('initpose')">Set Init Pose</button>
@@ -155,13 +162,13 @@
       </div>
       <div class="teleop-grid">
         <div></div>
-        <button class="tele-btn" onmousedown="startMoving(0.4,0)"  onmouseup="stopMoving" ontouchstart="startMoving(0.4,0)"  ontouchend="stopMoving">&#9650;</button>
+        <button class="tele-btn" onmousedown="startMoving(0.4,0)"  onmouseup="stopMoving" onmouseleave="stopMoving" ontouchstart="startMoving(0.4,0)"  ontouchend="stopMoving">&#9650;</button>
         <div></div>
-        <button class="tele-btn" onmousedown="startMoving(0,0.6)"  onmouseup="stopMoving" ontouchstart="startMoving(0,0.6)"  ontouchend="stopMoving">&#9664;</button>
+        <button class="tele-btn" onmousedown="startMoving(0,0.6)"  onmouseup="stopMoving" onmouseleave="stopMoving" ontouchstart="startMoving(0,0.6)"  ontouchend="stopMoving">&#9664;</button>
         <button class="tele-btn stop" onmousedown="stopMoving">STOP</button>
-        <button class="tele-btn" onmousedown="startMoving(0,-0.6)" onmouseup="stopMoving" ontouchstart="startMoving(0,-0.6)" ontouchend="stopMoving">&#9654;</button>
+        <button class="tele-btn" onmousedown="startMoving(0,-0.6)" onmouseup="stopMoving" onmouseleave="stopMoving" ontouchstart="startMoving(0,-0.6)" ontouchend="stopMoving">&#9654;</button>
         <div></div>
-        <button class="tele-btn" onmousedown="startMoving(-0.4,0)" onmouseup="stopMoving" ontouchstart="startMoving(-0.4,0)" ontouchend="stopMoving">&#9660;</button>
+        <button class="tele-btn" onmousedown="startMoving(-0.4,0)" onmouseup="stopMoving" onmouseleave="stopMoving" ontouchstart="startMoving(-0.4,0)" ontouchend="stopMoving">&#9660;</button>
         <div></div>
       </div>
       <p style="font-family:var(--font-mono);font-size:10px;color:var(--muted);text-align:center;padding-bottom:10px">Arrow keys also supported</p>
@@ -238,6 +245,8 @@
         var q = new THREE.Quaternion(p.orientation.x, p.orientation.y, p.orientation.z, p.orientation.w);
         var euler = new THREE.Euler().setFromQuaternion(q, 'ZYX');
         document.getElementById('poseTheta').textContent = (euler.z * 180 / Math.PI).toFixed(1);
+        robotWorldX = p.position.x;
+        robotWorldY = p.position.y;
         robotArrow.x = p.position.x * viewer.scene.scaleX + viewer.scene.x;
         robotArrow.y = -(p.position.y * viewer.scene.scaleY) + viewer.scene.y;
         robotArrow.rotation = euler.z * (180 / Math.PI) - 90;
@@ -269,9 +278,27 @@
   gridClient.on('change', function() {
     viewer.scaleToDimensions(gridClient.currentGrid.width, gridClient.currentGrid.height);
     viewer.shift(gridClient.currentGrid.pose.position.x, gridClient.currentGrid.pose.position.y);
+    // Zoom in to fill the canvas better
+    viewer.scene.scaleX *= 3;
+    viewer.scene.scaleY *= 3;
     document.getElementById('sb-map').textContent = 'RECEIVED';
     document.getElementById('sb-map').style.color = 'var(--success)';
   });
+
+  // ── ZOOM CONTROLS ──
+  var robotWorldX = 0, robotWorldY = 0;
+  function zoomMap(factor) {
+    var cx = viewer.renderer.width / 2;
+    var cy = viewer.renderer.height / 2;
+    viewer.scene.scaleX *= factor;
+    viewer.scene.scaleY *= factor;
+    viewer.scene.x = cx - (cx - viewer.scene.x) * factor;
+    viewer.scene.y = cy - (cy - viewer.scene.y) * factor;
+  }
+  function centerMap() {
+    viewer.scene.x = viewer.renderer.width  / 2 - robotWorldX * viewer.scene.scaleX;
+    viewer.scene.y = viewer.renderer.height / 2 + robotWorldY * viewer.scene.scaleY;
+  }
 
   var robotArrow = new ROS2D.NavigationArrow({ size:0.3, strokeSize:0.05, strokeStyle:'#00e5ff', pulse:false });
   viewer.scene.addChild(robotArrow);
@@ -374,8 +401,12 @@
   }
   function stopMoving() {
     if (teleopInterval) clearInterval(teleopInterval);
+    teleopInterval = null;
     if (cmdVelTopic) cmdVelTopic.publish(new ROSLIB.Message({ linear:{x:0,y:0,z:0}, angular:{x:0,y:0,z:0} }));
   }
+  // Stop on mouseup anywhere on the page — ensures release is always caught
+  document.addEventListener('mouseup', stopMoving);
+  document.addEventListener('touchend', stopMoving);
   var keysDown = {};
   document.addEventListener('keydown', function(e) {
     if (keysDown[e.key]) return; keysDown[e.key] = true;
