@@ -176,7 +176,7 @@
     </div>
     <div class="camera-inner">
       <img id="camera-stream"
-        src="http://192.168.0.200:8080/stream?topic=/robot/throttle/front_rgbd_camera/color/image_raw&type=mjpeg"
+        src="https://192.168.0.200/web_video_server/stream?topic=/robot/throttle/front_rgbd_camera/color/image_raw&type=mjpeg"
         alt="Camera stream unavailable -- ensure web_video_server is running on port 8080">
     </div>
   </div>
@@ -195,7 +195,7 @@
 <script>
   // ── ROSBRIDGE ──
   var ROBOT_IP = '192.168.0.200';
-  var ros = new ROSLIB.Ros({ url: 'ws://' + ROBOT_IP + ':9090' });
+  var ros = new ROSLIB.Ros({ url: 'wss://' + ROBOT_IP + '/ws' });
 
   ros.on('connection', function() {
     document.getElementById('conn-dot').className = 'connected';
