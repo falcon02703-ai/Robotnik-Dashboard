@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Dashboard</title>
+  <title>Senserbot Dashboard</title>
   <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/eventemitter2/lib/eventemitter2.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/roslib/build/roslib.min.js"></script>
@@ -10,7 +10,7 @@
     :root {
       --bg:#0a0d10;--surface:#111620;--border:#1e2a38;
       --accent:#00e5ff;--accent2:#ff6b35;--success:#00ff88;
-      --warn:#ffd600;--text:#ccd6f6;--muted:#4a5568;
+      --warn:#ffd600;--text:#ccd6f6;--muted:#7a8fa6;
       --font-mono:'Share Tech Mono',monospace;--font-ui:'Rajdhani',sans-serif;
     }
     *{box-sizing:border-box;margin:0;padding:0}
@@ -33,7 +33,8 @@
     .panel-badge{font-family:var(--font-mono);font-size:10px;color:var(--muted);background:rgba(255,255,255,.05);padding:2px 8px;border-radius:2px}
     .map-panel{grid-column:1}
     #rviz-container{width:100%;height:500px;background:#060910;display:block;position:relative;overflow:hidden}
-    #rviz-container canvas{width:100%!important;height:100%!important;object-fit:contain}
+    #rviz-container > div{position:absolute!important;top:0!important;left:0!important;width:100%!important;height:100%!important;margin:0!important}
+    #rviz-container canvas{display:block;width:100%!important;height:100%!important;margin:0!important}
     #vnc-overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:rgba(6,9,16,.85);font-family:var(--font-mono);color:var(--muted);font-size:12px;z-index:10;transition:opacity .4s}
     #vnc-overlay.hidden{opacity:0;pointer-events:none}
     #vnc-spinner{width:28px;height:28px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
@@ -85,7 +86,7 @@
   <div class="logo">
     <div class="logo-icon"></div>
     <div>
-      <h1>Dashboard</h1>
+      <h1>Senserbot</h1>
       <span>ROBOTNIK RBWCH — NAVIGATION DASHBOARD</span>
     </div>
   </div>
@@ -463,7 +464,7 @@
       if (!res.ok) throw new Error('Offer failed: HTTP ' + res.status);
       var answer = await res.json();
       await pc.setRemoteDescription({ type: 'answer', sdp: answer.sdp });
-      tryAttach(); // mids now assigned
+      tryAttach();
 
     } catch(e) {
       console.error('[Camera]', e);
