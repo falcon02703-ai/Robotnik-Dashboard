@@ -299,8 +299,9 @@
   // ── TASK 1: GOAL POSE ──
   function publishGoalPose(x, y, yaw) {
     if (!goalTopic) { showToast('Not connected to ROS'); return; }
+    var now = Date.now(); var secs = Math.floor(now/1000); var nsecs = (now % 1000) * 1e6;
     goalTopic.publish(new ROSLIB.Message({
-      header: { frame_id:'map', stamp:{ secs:0, nsecs:0 } },
+      header: { frame_id:'map', stamp:{ secs:secs, nsecs:nsecs } },
       pose: { position:{ x:x, y:y, z:0 }, orientation:yawToQuaternion(yaw) }
     }));
     var label = 'x:' + x.toFixed(2) + ' y:' + y.toFixed(2);
@@ -316,7 +317,7 @@
     var y   = parseFloat(document.getElementById('init-y').value)   || 0;
     var yaw = parseFloat(document.getElementById('init-yaw').value) || 0;
     initialPoseTopic.publish(new ROSLIB.Message({
-      header: { frame_id:'map', stamp:{ secs:0, nsecs:0 } },
+      header: { frame_id:'map', stamp:{ secs:secs, nsecs:nsecs } },
       pose: {
         pose: { position:{ x:x, y:y, z:0 }, orientation:yawToQuaternion(yaw) },
         covariance: [0.25,0,0,0,0,0, 0,0.25,0,0,0,0, 0,0,0,0,0,0, 0,0,0,0,0,0, 0,0,0,0,0,0, 0,0,0,0,0,0.0685]
