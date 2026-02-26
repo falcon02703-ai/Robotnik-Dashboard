@@ -64,7 +64,10 @@
     .tele-btn.stop{font-size:12px;font-family:var(--font-ui);font-weight:700;letter-spacing:1px;color:var(--accent2);border-color:var(--accent2)}
     .camera-panel{grid-column:1/-1}
     .camera-inner{padding:12px 16px}
-    #camera-stream{width:100%;max-height:280px;object-fit:contain;border:1px solid var(--border);background:#000;display:block}
+    .camera-feed-wrap{flex:1;display:flex;flex-direction:column;min-width:0}
+    .camera-feed-wrap video{width:100%;max-height:260px;object-fit:contain;border:1px solid var(--border);background:#000;display:block}
+    .camera-feed-label{font-family:var(--font-mono);font-size:10px;color:var(--muted);padding:4px 0;letter-spacing:1px}
+    .camera-inner{padding:12px 16px;display:flex;gap:12px}
     .ext-ws-form{padding:12px 16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
     .ext-ws-form input{flex:1;min-width:180px;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:var(--font-mono);font-size:13px;padding:7px 10px;border-radius:2px}
     .ext-ws-form input:focus{outline:none;border-color:var(--accent2)}
@@ -180,13 +183,18 @@
   <!-- CAMERA -->
   <div class="panel camera-panel">
     <div class="panel-header">
-      <span class="panel-title">Front RGB Camera</span>
-      <span class="panel-badge">/robot/throttle/front_rgbd_camera/color/image_raw/compressed</span>
+      <span class="panel-title">Cameras</span>
+      <span class="panel-badge">WebRTC</span>
     </div>
     <div class="camera-inner">
-      <img id="camera-stream"
-        src="https://192.168.0.200/web_video_server/stream?topic=/robot/throttle/front_rgbd_camera/color/image_raw&type=mjpeg"
-        alt="Camera stream unavailable -- ensure web_video_server is running on port 8080">
+      <div class="camera-feed-wrap">
+        <video id="camera-front" autoplay playsinline muted></video>
+        <div class="camera-feed-label">FRONT &nbsp;<span id="camera-front-status" style="color:var(--muted)">CONNECTING...</span></div>
+      </div>
+      <div class="camera-feed-wrap">
+        <video id="camera-top" autoplay playsinline muted></video>
+        <div class="camera-feed-label">TOP PTZ &nbsp;<span id="camera-top-status" style="color:var(--muted)">CONNECTING...</span></div>
+      </div>
     </div>
   </div>
 </div>
@@ -386,6 +394,86 @@
   // connectVNC() is called from that module once RFB is available
   window._vncRfb = null;
 
+  // ── WEBRTC CAMERAS ────────────────────────────────────────────────────────
+  async function connectCamera() {
+    var frontVideo  = document.getElementById('camera-front');
+    var topVideo    = document.getElementById('camera-top');
+    var frontStatus = document.getElementById('camera-front-status');
+    var topStatus   = document.getElementById('camera-top-status');
+
+    try {
+      var pc = new RTCPeerConnection({ iceServers: [] });
+      window._cameraPC = pc;
+
+      pc.addTransceiver('video', { direction: 'recvonly' }); // mid:0 thermal
+      pc.addTransceiver('video', { direction: 'recvonly' }); // mid:1 top ptz
+      pc.addTransceiver('video', { direction: 'recvonly' }); // mid:2 front
+      pc.addTransceiver('audio', { direction: 'sendrecv' }); // mid:3
+      pc.createDataChannel('data');                          // mid:4
+
+      var pendingTracks = new Map();
+
+      pc.ontrack = function(event) {
+        if (event.track.kind === 'video') {
+          pendingTracks.set(event.transceiver, event.track);
+          tryAttach();
+        }
+      };
+
+      function tryAttach() {
+        pc.getTransceivers().forEach(function(tc) {
+          if (!pendingTracks.has(tc)) return;
+          var track = pendingTracks.get(tc);
+          if (tc.mid === '2') {
+            frontVideo.srcObject = new MediaStream([track]);
+            frontStatus.textContent = 'LIVE';
+            frontStatus.style.color = 'var(--success)';
+          }
+          if (tc.mid === '1') {
+            topVideo.srcObject = new MediaStream([track]);
+            topStatus.textContent = 'LIVE';
+            topStatus.style.color = 'var(--success)';
+          }
+        });
+      }
+
+      pc.oniceconnectionstatechange = function() {
+        if (pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'disconnected') {
+          frontStatus.textContent = 'DISCONNECTED';
+          frontStatus.style.color = 'var(--accent2)';
+          topStatus.textContent   = 'DISCONNECTED';
+          topStatus.style.color   = 'var(--accent2)';
+        }
+      };
+
+      var offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+
+      var clientId = Math.random().toString(36).substring(2, 13);
+      var res = await fetch('https://192.168.0.200/webrtc/offer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          client_id: clientId, sdp: offer.sdp,
+          target_audio: '', target_video: 'all',
+          token: 'token', type: 'offer'
+        })
+      });
+
+      if (!res.ok) throw new Error('Offer failed: HTTP ' + res.status);
+      var answer = await res.json();
+      await pc.setRemoteDescription({ type: 'answer', sdp: answer.sdp });
+      tryAttach(); // mids now assigned
+
+    } catch(e) {
+      console.error('[Camera]', e);
+      document.getElementById('camera-front-status').textContent = 'ERROR: ' + e.message;
+      document.getElementById('camera-front-status').style.color = 'var(--accent2)';
+    }
+  }
+
+  connectCamera();
+
   // ── CLOCK + TOAST ──
   setInterval(function() { document.getElementById('sb-time').textContent = new Date().toLocaleTimeString(); }, 1000);
   var toastTimer = null;
@@ -400,26 +488,19 @@
 
 <script type="module">
 (async function() {
-  // ── noVNC — loads RFB via CDN ES module ──────────────────────────────────
   let RFB;
   try {
     const mod = await import('https://cdn.jsdelivr.net/npm/@novnc/novnc@1.4.0/core/rfb.js');
     RFB = mod.default;
   } catch(importErr) {
     console.error('[VNC] noVNC import failed:', importErr);
-    document.getElementById('vnc-status-text').textContent = 'noVNC LOAD ERROR — check browser console';
+    document.getElementById('vnc-status-text').textContent = 'noVNC LOAD ERROR';
     document.getElementById('vnc-spinner').style.display   = 'none';
     document.getElementById('vnc-reconnect').style.display = 'inline-block';
     return;
   }
 
-  const ROBOT_IP = '192.168.0.200';
-  const VNC_PATH = '/rviz_web';
-  const VNC_URL  = 'wss://' + ROBOT_IP + VNC_PATH;
-
-  // ── VNC password — fetched from /backend/settings/rviz on the robot.
-  // If the password ever changes, run this in the Robotnik HMI console to get the new one:
-  //   fetch('/backend/settings/rviz').then(r=>r.json()).then(d=>console.log(d.data.password))
+  const VNC_URL      = 'wss://192.168.0.200/rviz_web';
   const VNC_PASSWORD = 'RXN82ybVZbMsyriB';
 
   const container  = document.getElementById('rviz-container');
@@ -428,14 +509,8 @@
   const spinner    = document.getElementById('vnc-spinner');
   const reconnBtn  = document.getElementById('vnc-reconnect');
 
-  const LOG_MAX = 8;
-  const logLines = [];
   function vncLog(msg, level) {
-    const ts  = new Date().toLocaleTimeString();
-    const line = '[' + ts + '] ' + msg;
     console[level || 'log']('[VNC]', msg);
-    logLines.unshift(line);
-    if (logLines.length > LOG_MAX) logLines.pop();
     statusText.textContent = msg;
   }
 
@@ -448,46 +523,19 @@
 
   function probeWebSocket() {
     return new Promise((resolve) => {
-      vncLog('Probing WebSocket: ' + VNC_URL, 'log');
       let ws;
-      try {
-        ws = new WebSocket(VNC_URL);
-        ws.binaryType = 'arraybuffer';
-      } catch(e) {
-        resolve({ ok: false, reason: 'WS constructor threw: ' + e.message });
-        return;
-      }
-      const timer = setTimeout(() => {
-        ws.close();
-        resolve({ ok: false, reason: 'Timed out waiting for WebSocket open (10 s)' });
-      }, 10000);
-      ws.onopen = () => {
-        clearTimeout(timer);
-        vncLog('Raw WebSocket OPEN — handing off to noVNC RFB', 'log');
-        ws.close(1000, 'probe done');
-        resolve({ ok: true });
-      };
-      ws.onerror = () => {
-        clearTimeout(timer);
-        resolve({ ok: false, reason: 'WebSocket error (mixed-content, cert, or nginx block) — see browser console' });
-      };
-      ws.onclose = (e) => {
-        clearTimeout(timer);
-        if (e.code !== 1000) {
-          resolve({ ok: false, reason: 'WebSocket closed early, code ' + e.code + ' (' + (e.reason || 'no reason') + ')' });
-        }
-      };
+      try { ws = new WebSocket(VNC_URL); ws.binaryType = 'arraybuffer'; }
+      catch(e) { resolve({ ok: false, reason: e.message }); return; }
+      const timer = setTimeout(() => { ws.close(); resolve({ ok: false, reason: 'Timed out' }); }, 10000);
+      ws.onopen  = () => { clearTimeout(timer); ws.close(1000, 'probe done'); resolve({ ok: true }); };
+      ws.onerror = () => { clearTimeout(timer); resolve({ ok: false, reason: 'WebSocket error' }); };
+      ws.onclose = (e) => { clearTimeout(timer); if (e.code !== 1000) resolve({ ok: false, reason: 'Closed early code ' + e.code }); };
     });
   }
 
   window.connectVNC = async function connectVNC() {
-    if (window._vncRfb) {
-      try { window._vncRfb.disconnect(); } catch(_) {}
-      window._vncRfb = null;
-    }
-
-    setVncStatus('PROBING WebSocket to ' + VNC_URL + '…', true, false);
-
+    if (window._vncRfb) { try { window._vncRfb.disconnect(); } catch(_) {} window._vncRfb = null; }
+    setVncStatus('PROBING WebSocket...', true, false);
     const probe = await probeWebSocket();
     if (!probe.ok) {
       setVncStatus('WS PROBE FAILED: ' + probe.reason, false, true);
@@ -495,65 +543,37 @@
       document.getElementById('sb-map').style.color = 'var(--accent2)';
       return;
     }
-
-    setVncStatus('WebSocket OK — starting RFB handshake…', true, false);
-
+    setVncStatus('WebSocket OK - starting RFB handshake...', true, false);
     let rfb;
     try {
-      rfb = new RFB(container, VNC_URL, {
-        credentials: { password: VNC_PASSWORD }
-      });
+      rfb = new RFB(container, VNC_URL, { credentials: { password: VNC_PASSWORD } });
     } catch(e) {
-      setVncStatus('RFB constructor error: ' + e.message, false, true);
-      vncLog('RFB constructor threw: ' + e.message, 'error');
+      setVncStatus('RFB error: ' + e.message, false, true);
       return;
     }
-
-    rfb.viewOnly      = false;   // interactive — mouse/keyboard forwarded to RViz
-    rfb.scaleViewport = true;
-    rfb.clipViewport  = true;
-    rfb.resizeSession = false;
-    rfb.background    = '#060910';
-
+    rfb.viewOnly = false; rfb.scaleViewport = true; rfb.clipViewport = true;
+    rfb.resizeSession = false; rfb.background = '#060910';
     rfb.addEventListener('connect', () => {
-      vncLog('RFB connected — stream live', 'log');
+      vncLog('RFB connected');
       overlay.classList.add('hidden');
       document.getElementById('sb-map').textContent = 'VNC LIVE';
       document.getElementById('sb-map').style.color = 'var(--success)';
     });
-
     rfb.addEventListener('disconnect', (e) => {
-      const detail = e.detail || {};
-      const clean  = detail.clean;
-      const reason = detail.reason || (clean ? 'clean close' : 'unexpected close');
-      vncLog('RFB disconnect — clean:' + clean + ' reason:' + reason, 'warn');
-      setVncStatus(
-        clean
-          ? 'VNC DISCONNECTED (' + reason + ')'
-          : 'VNC LOST: ' + reason + ' — open browser console for detail',
-        false, true
-      );
+      const d = e.detail || {};
+      setVncStatus(d.clean ? 'VNC DISCONNECTED' : 'VNC LOST: ' + (d.reason || 'unexpected'), false, true);
       document.getElementById('sb-map').textContent = 'VNC LOST';
       document.getElementById('sb-map').style.color = 'var(--accent2)';
     });
-
-    rfb.addEventListener('credentialsrequired', () => {
-      vncLog('VNC server requested credentials — sending password', 'warn');
-      rfb.sendCredentials({ password: VNC_PASSWORD });
-    });
-
+    rfb.addEventListener('credentialsrequired', () => { rfb.sendCredentials({ password: VNC_PASSWORD }); });
     rfb.addEventListener('securityfailure', (e) => {
-      const reason = (e.detail && e.detail.reason) || 'unknown';
-      vncLog('VNC security failure: ' + reason, 'error');
-      setVncStatus('VNC AUTH FAILED: ' + reason, false, true);
+      setVncStatus('VNC AUTH FAILED: ' + ((e.detail && e.detail.reason) || 'unknown'), false, true);
     });
-
     window._vncRfb = rfb;
   };
 
-  // Auto-connect
   connectVNC();
-})(); // end async IIFE
+})();
 </script>
 </body>
 </html>
