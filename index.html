@@ -6,9 +6,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/eventemitter2/lib/eventemitter2.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/roslib/build/roslib.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/easeljs/lib/easeljs.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/ros2d/build/ros2d.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three/build/three.min.js"></script>
   <style>
     :root {
       --bg:#0a0d10;--surface:#111620;--border:#1e2a38;
@@ -35,7 +32,15 @@
     .panel-title{font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--accent)}
     .panel-badge{font-family:var(--font-mono);font-size:10px;color:var(--muted);background:rgba(255,255,255,.05);padding:2px 8px;border-radius:2px}
     .map-panel{grid-column:1}
-    #nav2dmap{width:100%;height:500px;cursor:crosshair;background:#060910}
+    #rviz-container{width:100%;height:500px;background:#060910;display:block;position:relative;overflow:hidden}
+    #rviz-container canvas{width:100%!important;height:100%!important;object-fit:contain}
+    #vnc-overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:rgba(6,9,16,.85);font-family:var(--font-mono);color:var(--muted);font-size:12px;z-index:10;transition:opacity .4s}
+    #vnc-overlay.hidden{opacity:0;pointer-events:none}
+    #vnc-spinner{width:28px;height:28px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    #vnc-status-text{color:var(--text);letter-spacing:1px}
+    #vnc-reconnect{font-family:var(--font-ui);font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:6px 14px;border:1px solid var(--accent2);color:var(--accent2);background:transparent;cursor:pointer;border-radius:2px;display:none}
+    #vnc-reconnect:hover{background:var(--accent2);color:var(--bg)}
     .map-controls{display:flex;gap:8px;padding:10px 16px;border-top:1px solid var(--border);flex-wrap:wrap;align-items:center}
     .mode-btn{font-family:var(--font-ui);font-size:12px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;padding:7px 14px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;border-radius:2px;transition:all .15s}
     .mode-btn.active{border-color:var(--accent);color:var(--accent);background:rgba(0,229,255,.08)}
@@ -92,20 +97,17 @@
   <div class="panel map-panel">
     <div class="panel-header">
       <span class="panel-title">Map &amp; Navigation</span>
-      <span class="panel-badge">/robot/map</span>
+      <span class="panel-badge">noVNC → wss:/rviz_web → rviz-vnc:5910</span>
     </div>
-    <div style="position:relative;">
-      <div id="nav2dmap"></div>
-      <div style="position:absolute;top:10px;right:10px;display:flex;flex-direction:column;gap:4px;z-index:10;">
-        <button onclick="zoomMap(1.3)" style="width:32px;height:32px;background:rgba(0,229,255,0.1);border:1px solid var(--accent);color:var(--accent);font-size:18px;cursor:pointer;border-radius:2px;line-height:1;">+</button>
-        <button onclick="zoomMap(1/1.3)" style="width:32px;height:32px;background:rgba(0,229,255,0.1);border:1px solid var(--accent);color:var(--accent);font-size:18px;cursor:pointer;border-radius:2px;line-height:1;">&#8722;</button>
-        <button onclick="centerMap()" title="Center on robot" style="width:32px;height:32px;background:rgba(0,229,255,0.1);border:1px solid var(--accent);color:var(--accent);font-size:13px;cursor:pointer;border-radius:2px;line-height:1;">&#8857;</button>
+    <div id="rviz-container">
+      <div id="vnc-overlay">
+        <div id="vnc-spinner"></div>
+        <span id="vnc-status-text">CONNECTING TO RVIZ VNC...</span>
+        <button id="vnc-reconnect" onclick="connectVNC()">RECONNECT</button>
       </div>
     </div>
     <div class="map-controls">
-      <button class="mode-btn active" id="btn-goal"     onclick="setMode('goal')">Set Goal</button>
-      <button class="mode-btn"        id="btn-initpose" onclick="setMode('initpose')">Set Init Pose</button>
-      <span id="map-mode-label">&#9658; CLICK MAP TO SET GOAL POSE</span>
+      <span id="map-mode-label">&#9658; USE RVIZ TOOLS INSIDE THE VIEW TO SET GOALS</span>
     </div>
   </div>
 
@@ -162,13 +164,13 @@
       </div>
       <div class="teleop-grid">
         <div></div>
-        <button class="tele-btn" onmousedown="startMoving(0.4,0)"  onmouseup="stopMoving" onmouseleave="stopMoving" ontouchstart="startMoving(0.4,0)"  ontouchend="stopMoving">&#9650;</button>
+        <button class="tele-btn" onmousedown="startMoving(0.4,0)"  onmouseup="stopMoving()" onmouseleave="stopMoving()" ontouchstart="startMoving(0.4,0)"  ontouchend="stopMoving()">&#9650;</button>
         <div></div>
-        <button class="tele-btn" onmousedown="startMoving(0,0.6)"  onmouseup="stopMoving" onmouseleave="stopMoving" ontouchstart="startMoving(0,0.6)"  ontouchend="stopMoving">&#9664;</button>
-        <button class="tele-btn stop" onmousedown="stopMoving">STOP</button>
-        <button class="tele-btn" onmousedown="startMoving(0,-0.6)" onmouseup="stopMoving" onmouseleave="stopMoving" ontouchstart="startMoving(0,-0.6)" ontouchend="stopMoving">&#9654;</button>
+        <button class="tele-btn" onmousedown="startMoving(0,0.6)"  onmouseup="stopMoving()" onmouseleave="stopMoving()" ontouchstart="startMoving(0,0.6)"  ontouchend="stopMoving()">&#9664;</button>
+        <button class="tele-btn stop" onmousedown="stopMoving()">STOP</button>
+        <button class="tele-btn" onmousedown="startMoving(0,-0.6)" onmouseup="stopMoving()" onmouseleave="stopMoving()" ontouchstart="startMoving(0,-0.6)" ontouchend="stopMoving()">&#9654;</button>
         <div></div>
-        <button class="tele-btn" onmousedown="startMoving(-0.4,0)" onmouseup="stopMoving" onmouseleave="stopMoving" ontouchstart="startMoving(-0.4,0)" ontouchend="stopMoving">&#9660;</button>
+        <button class="tele-btn" onmousedown="startMoving(-0.4,0)" onmouseup="stopMoving()" onmouseleave="stopMoving()" ontouchstart="startMoving(-0.4,0)" ontouchend="stopMoving()">&#9660;</button>
         <div></div>
       </div>
       <p style="font-family:var(--font-mono);font-size:10px;color:var(--muted);text-align:center;padding-bottom:10px">Arrow keys also supported</p>
@@ -242,14 +244,12 @@
         var p = msg.pose.pose;
         document.getElementById('poseX').textContent = p.position.x.toFixed(3);
         document.getElementById('poseY').textContent = p.position.y.toFixed(3);
-        var q = new THREE.Quaternion(p.orientation.x, p.orientation.y, p.orientation.z, p.orientation.w);
-        var euler = new THREE.Euler().setFromQuaternion(q, 'ZYX');
-        document.getElementById('poseTheta').textContent = (euler.z * 180 / Math.PI).toFixed(1);
-        robotWorldX = p.position.x;
-        robotWorldY = p.position.y;
-        robotArrow.x = p.position.x * viewer.scene.scaleX + viewer.scene.x;
-        robotArrow.y = -(p.position.y * viewer.scene.scaleY) + viewer.scene.y;
-        robotArrow.rotation = euler.z * (180 / Math.PI) - 90;
+        // Yaw from quaternion: atan2(2*(w*z+x*y), 1-2*(y*y+z*z))
+        var siny = 2*(p.orientation.w*p.orientation.z + p.orientation.x*p.orientation.y);
+        var cosy = 1 - 2*(p.orientation.y*p.orientation.y + p.orientation.z*p.orientation.z);
+        var yawDeg = Math.atan2(siny, cosy) * 180 / Math.PI;
+        document.getElementById('poseTheta').textContent = yawDeg.toFixed(1);
+
       });
 
     // Odometry
@@ -270,38 +270,8 @@
     return { x:0, y:0, z:Math.sin(yaw/2), w:Math.cos(yaw/2) };
   }
 
-  // ── MAP ──
-  var mapEl = document.getElementById('nav2dmap');
-  var viewer = new ROS2D.Viewer({ divID:'nav2dmap', width:mapEl.offsetWidth, height:500 });
-
-  var gridClient = new ROS2D.OccupancyGridClient({ ros:ros, rootObject:viewer.scene, continuous:true, topic:'/robot/map' });
-  gridClient.on('change', function() {
-    viewer.scaleToDimensions(gridClient.currentGrid.width, gridClient.currentGrid.height);
-    viewer.shift(gridClient.currentGrid.pose.position.x, gridClient.currentGrid.pose.position.y);
-    // Zoom in to fill the canvas better
-    viewer.scene.scaleX *= 3;
-    viewer.scene.scaleY *= 3;
-    document.getElementById('sb-map').textContent = 'RECEIVED';
-    document.getElementById('sb-map').style.color = 'var(--success)';
-  });
-
-  // ── ZOOM CONTROLS ──
-  var robotWorldX = 0, robotWorldY = 0;
-  function zoomMap(factor) {
-    var cx = viewer.renderer.width / 2;
-    var cy = viewer.renderer.height / 2;
-    viewer.scene.scaleX *= factor;
-    viewer.scene.scaleY *= factor;
-    viewer.scene.x = cx - (cx - viewer.scene.x) * factor;
-    viewer.scene.y = cy - (cy - viewer.scene.y) * factor;
-  }
-  function centerMap() {
-    viewer.scene.x = viewer.renderer.width  / 2 - robotWorldX * viewer.scene.scaleX;
-    viewer.scene.y = viewer.renderer.height / 2 + robotWorldY * viewer.scene.scaleY;
-  }
-
-  var robotArrow = new ROS2D.NavigationArrow({ size:0.3, strokeSize:0.05, strokeStyle:'#00e5ff', pulse:false });
-  viewer.scene.addChild(robotArrow);
+  // ── MAP (RViz iframe - no ros2d needed) ──
+  // Map is displayed via RViz VNC stream at /rviz_web
 
   // ── MAP CLICK MODES ──
   var mapMode = 'goal';
@@ -313,18 +283,9 @@
       mode === 'goal' ? '> CLICK MAP TO SET GOAL POSE' : '> CLICK MAP TO SET INITIAL POSE';
   }
 
-  mapEl.addEventListener('click', function(e) {
-    var rect = mapEl.getBoundingClientRect();
-    var worldX = (e.clientX - rect.left - viewer.scene.x) / viewer.scene.scaleX;
-    var worldY = -((e.clientY - rect.top  - viewer.scene.y) / viewer.scene.scaleY);
-    if (mapMode === 'goal') {
-      publishGoalPose(worldX, worldY, 0.0);
-    } else {
-      document.getElementById('init-x').value = worldX.toFixed(3);
-      document.getElementById('init-y').value = worldY.toFixed(3);
-      publishInitialPose();
-    }
-  });
+  // NOTE: Click-to-set-goal on the VNC canvas is not supported — the VNC stream
+  // is a pixel mirror with no knowledge of the map coordinate frame. Use the
+  // RViz "2D Nav Goal" tool inside the VNC view directly, or use the form fields below.
 
   // ── TASK 1: GOAL POSE ──
   function publishGoalPose(x, y, yaw) {
@@ -420,6 +381,11 @@
     if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) stopMoving();
   });
 
+  // ── RVIZ VNC (noVNC) ──
+  // noVNC is loaded as an ES module separately below
+  // connectVNC() is called from that module once RFB is available
+  window._vncRfb = null;
+
   // ── CLOCK + TOAST ──
   setInterval(function() { document.getElementById('sb-time').textContent = new Date().toLocaleTimeString(); }, 1000);
   var toastTimer = null;
@@ -430,6 +396,164 @@
     if (toastTimer) clearTimeout(toastTimer);
     toastTimer = setTimeout(function() { t.classList.remove('show'); }, 2500);
   }
+</script>
+
+<script type="module">
+(async function() {
+  // ── noVNC — loads RFB via CDN ES module ──────────────────────────────────
+  let RFB;
+  try {
+    const mod = await import('https://cdn.jsdelivr.net/npm/@novnc/novnc@1.4.0/core/rfb.js');
+    RFB = mod.default;
+  } catch(importErr) {
+    console.error('[VNC] noVNC import failed:', importErr);
+    document.getElementById('vnc-status-text').textContent = 'noVNC LOAD ERROR — check browser console';
+    document.getElementById('vnc-spinner').style.display   = 'none';
+    document.getElementById('vnc-reconnect').style.display = 'inline-block';
+    return;
+  }
+
+  const ROBOT_IP = '192.168.0.200';
+  const VNC_PATH = '/rviz_web';
+  const VNC_URL  = 'wss://' + ROBOT_IP + VNC_PATH;
+
+  // ── VNC password — fetched from /backend/settings/rviz on the robot.
+  // If the password ever changes, run this in the Robotnik HMI console to get the new one:
+  //   fetch('/backend/settings/rviz').then(r=>r.json()).then(d=>console.log(d.data.password))
+  const VNC_PASSWORD = 'RXN82ybVZbMsyriB';
+
+  const container  = document.getElementById('rviz-container');
+  const overlay    = document.getElementById('vnc-overlay');
+  const statusText = document.getElementById('vnc-status-text');
+  const spinner    = document.getElementById('vnc-spinner');
+  const reconnBtn  = document.getElementById('vnc-reconnect');
+
+  const LOG_MAX = 8;
+  const logLines = [];
+  function vncLog(msg, level) {
+    const ts  = new Date().toLocaleTimeString();
+    const line = '[' + ts + '] ' + msg;
+    console[level || 'log']('[VNC]', msg);
+    logLines.unshift(line);
+    if (logLines.length > LOG_MAX) logLines.pop();
+    statusText.textContent = msg;
+  }
+
+  function setVncStatus(msg, showSpinner, showReconnect) {
+    vncLog(msg);
+    spinner.style.display   = showSpinner   ? 'block'        : 'none';
+    reconnBtn.style.display = showReconnect ? 'inline-block' : 'none';
+    overlay.classList.remove('hidden');
+  }
+
+  function probeWebSocket() {
+    return new Promise((resolve) => {
+      vncLog('Probing WebSocket: ' + VNC_URL, 'log');
+      let ws;
+      try {
+        ws = new WebSocket(VNC_URL);
+        ws.binaryType = 'arraybuffer';
+      } catch(e) {
+        resolve({ ok: false, reason: 'WS constructor threw: ' + e.message });
+        return;
+      }
+      const timer = setTimeout(() => {
+        ws.close();
+        resolve({ ok: false, reason: 'Timed out waiting for WebSocket open (10 s)' });
+      }, 10000);
+      ws.onopen = () => {
+        clearTimeout(timer);
+        vncLog('Raw WebSocket OPEN — handing off to noVNC RFB', 'log');
+        ws.close(1000, 'probe done');
+        resolve({ ok: true });
+      };
+      ws.onerror = () => {
+        clearTimeout(timer);
+        resolve({ ok: false, reason: 'WebSocket error (mixed-content, cert, or nginx block) — see browser console' });
+      };
+      ws.onclose = (e) => {
+        clearTimeout(timer);
+        if (e.code !== 1000) {
+          resolve({ ok: false, reason: 'WebSocket closed early, code ' + e.code + ' (' + (e.reason || 'no reason') + ')' });
+        }
+      };
+    });
+  }
+
+  window.connectVNC = async function connectVNC() {
+    if (window._vncRfb) {
+      try { window._vncRfb.disconnect(); } catch(_) {}
+      window._vncRfb = null;
+    }
+
+    setVncStatus('PROBING WebSocket to ' + VNC_URL + '…', true, false);
+
+    const probe = await probeWebSocket();
+    if (!probe.ok) {
+      setVncStatus('WS PROBE FAILED: ' + probe.reason, false, true);
+      document.getElementById('sb-map').textContent = 'WS FAILED';
+      document.getElementById('sb-map').style.color = 'var(--accent2)';
+      return;
+    }
+
+    setVncStatus('WebSocket OK — starting RFB handshake…', true, false);
+
+    let rfb;
+    try {
+      rfb = new RFB(container, VNC_URL, {
+        credentials: { password: VNC_PASSWORD }
+      });
+    } catch(e) {
+      setVncStatus('RFB constructor error: ' + e.message, false, true);
+      vncLog('RFB constructor threw: ' + e.message, 'error');
+      return;
+    }
+
+    rfb.viewOnly      = false;   // interactive — mouse/keyboard forwarded to RViz
+    rfb.scaleViewport = true;
+    rfb.clipViewport  = true;
+    rfb.resizeSession = false;
+    rfb.background    = '#060910';
+
+    rfb.addEventListener('connect', () => {
+      vncLog('RFB connected — stream live', 'log');
+      overlay.classList.add('hidden');
+      document.getElementById('sb-map').textContent = 'VNC LIVE';
+      document.getElementById('sb-map').style.color = 'var(--success)';
+    });
+
+    rfb.addEventListener('disconnect', (e) => {
+      const detail = e.detail || {};
+      const clean  = detail.clean;
+      const reason = detail.reason || (clean ? 'clean close' : 'unexpected close');
+      vncLog('RFB disconnect — clean:' + clean + ' reason:' + reason, 'warn');
+      setVncStatus(
+        clean
+          ? 'VNC DISCONNECTED (' + reason + ')'
+          : 'VNC LOST: ' + reason + ' — open browser console for detail',
+        false, true
+      );
+      document.getElementById('sb-map').textContent = 'VNC LOST';
+      document.getElementById('sb-map').style.color = 'var(--accent2)';
+    });
+
+    rfb.addEventListener('credentialsrequired', () => {
+      vncLog('VNC server requested credentials — sending password', 'warn');
+      rfb.sendCredentials({ password: VNC_PASSWORD });
+    });
+
+    rfb.addEventListener('securityfailure', (e) => {
+      const reason = (e.detail && e.detail.reason) || 'unknown';
+      vncLog('VNC security failure: ' + reason, 'error');
+      setVncStatus('VNC AUTH FAILED: ' + reason, false, true);
+    });
+
+    window._vncRfb = rfb;
+  };
+
+  // Auto-connect
+  connectVNC();
+})(); // end async IIFE
 </script>
 </body>
 </html>
