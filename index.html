@@ -114,8 +114,9 @@
         <button id="vnc-reconnect" onclick="connectVNC()">RECONNECT</button>
       </div>
     </div>
-    <div class="map-controls">
+    <div class="map-controls" style="display:flex;align-items:center;justify-content:space-between">
       <span id="map-mode-label">&#9658; USE RVIZ TOOLS INSIDE THE VIEW TO SET GOALS</span>
+      <button onclick="cancelGoal()" style="font-family:var(--font-mono);font-size:11px;letter-spacing:1px;padding:4px 12px;background:transparent;border:1px solid var(--accent2);color:var(--accent2);cursor:pointer;border-radius:2px;transition:all .15s" onmouseover="this.style.background='var(--accent2)';this.style.color='var(--bg)'" onmouseout="this.style.background='transparent';this.style.color='var(--accent2)'">&#9632; CANCEL GOAL</button>
     </div>
   </div>
 
@@ -217,6 +218,22 @@
 <script>
   // ── ROSBRIDGE ──
   var ROBOT_IP = '192.168.0.200';
+  function robotLogin() {
+    var popup = window.open('https://192.168.0.200/app','robot-login','width=520,height=620,left=200,top=100');
+    var timer = setInterval(function() {
+      if (!popup || popup.closed) {
+        clearInterval(timer);
+        document.getElementById('login-btn').textContent = 'LOGGED IN';
+        document.getElementById('login-btn').className = 'authed';
+        ros.connect('wss://' + ROBOT_IP + '/rosbridge');
+        if (window._cameraPC) { window._cameraPC.close(); window._cameraPC = null; }
+        connectCamera();
+        if (window._vncRfb) { try { window._vncRfb.disconnect(); } catch(_) {} }
+        connectVNC();
+      }
+    }, 500);
+  }
+
   var ros = new ROSLIB.Ros({ url: 'wss://' + ROBOT_IP + '/ws' });
 
   ros.on('connection', function() {
@@ -302,13 +319,21 @@
   // RViz "2D Nav Goal" tool inside the VNC view directly, or use the form fields below.
 
   // ── TASK 1: GOAL POSE ──
+  function cancelGoal() {
+    if (rmsCancelTopic) {
+      rmsCancelTopic.publish(new ROSLIB.Message({}));
+      showToast('Goal cancelled');
+      document.getElementById('sb-goal').textContent = '--';
+      document.getElementById('sb-goal').style.color = 'var(--muted)';
+    } else {
+      showToast('Not connected to ROS');
+    }
+  }
+
   function publishGoalPose(x, y, yaw) {
     if (!goalTopic) { showToast('Not connected to ROS'); return; }
-    // Cancel any queued RMS task before sending new goal
-    if (rmsCancelTopic) rmsCancelTopic.publish(new ROSLIB.Message({}));
-    var now = Date.now(); var secs = Math.floor(now/1000); var nsecs = (now % 1000) * 1e6;
     goalTopic.publish(new ROSLIB.Message({
-      header: { frame_id:'robot_map', stamp:{ secs:secs, nsecs:nsecs } },
+      header: { frame_id:'robot_map', stamp:{ secs:Math.floor(Date.now()/1000), nsecs:(Date.now()%1000)*1e6 } },
       pose: { position:{ x:x, y:y, z:0 }, orientation:yawToQuaternion(yaw) }
     }));
     var label = 'x:' + x.toFixed(2) + ' y:' + y.toFixed(2);
