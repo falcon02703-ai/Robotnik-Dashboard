@@ -21,10 +21,7 @@
     .logo-icon{width:36px;height:36px;background:var(--accent);clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%)}
     .logo h1{font-size:22px;font-weight:700;letter-spacing:3px;color:var(--accent);text-transform:uppercase}
     .logo span{font-size:11px;color:var(--muted);font-family:var(--font-mono);letter-spacing:2px;display:block}
-    #conn-status{font-family:var(--font-mono);font-size:12px;display:flex;align-items:center;gap:12px}
-    #login-btn{font-family:var(--font-mono);font-size:11px;letter-spacing:1px;padding:5px 12px;background:transparent;border:1px solid var(--accent);color:var(--accent);cursor:pointer;border-radius:2px;transition:all .15s}
-    #login-btn:hover{background:var(--accent);color:var(--bg)}
-    #login-btn.authed{border-color:var(--success);color:var(--success);pointer-events:none}
+    #conn-status{font-family:var(--font-mono);font-size:12px;display:flex;align-items:center;gap:8px}
     #conn-dot{width:10px;height:10px;border-radius:50%;background:var(--muted);transition:background .3s}
     #conn-dot.connected{background:var(--success);animation:pulse 2s infinite}
     #conn-dot.error{background:var(--accent2)}
@@ -35,9 +32,9 @@
     .panel-title{font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--accent)}
     .panel-badge{font-family:var(--font-mono);font-size:10px;color:var(--muted);background:rgba(255,255,255,.05);padding:2px 8px;border-radius:2px}
     .map-panel{grid-column:1}
-    #rviz-container{width:100%;height:720px;background:#060910;display:block;position:relative;overflow:hidden}
-    #rviz-container > div{position:absolute!important;top:0!important;left:0!important;width:100%!important;height:100%!important;margin:0!important}
-    #rviz-container canvas{display:block;width:100%!important;height:100%!important;margin:0!important}
+    #rviz-container{width:100%;height:500px;background:#060910;display:block;position:relative;overflow:hidden}
+    #rviz-container > div{position:absolute!important;top:0!important;left:0!important;width:100%!important;height:100%!important;margin:0!important;overflow:hidden!important}
+    #rviz-container canvas{display:block;width:100%!important;height:100%!important;margin:0!important;object-fit:contain!important;max-height:100%!important}
     #vnc-overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:rgba(6,9,16,.85);font-family:var(--font-mono);color:var(--muted);font-size:12px;z-index:10;transition:opacity .4s}
     #vnc-overlay.hidden{opacity:0;pointer-events:none}
     #vnc-spinner{width:28px;height:28px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
@@ -69,7 +66,7 @@
     .camera-panel{grid-column:1/-1}
     .camera-inner{padding:12px 16px}
     .camera-feed-wrap{flex:1;display:flex;flex-direction:column;min-width:0}
-    .camera-feed-wrap video{width:100%;height:320px;object-fit:cover;border:1px solid var(--border);background:none;display:block}
+    .camera-feed-wrap video{width:100%;max-height:260px;object-fit:contain;border:1px solid var(--border);background:#000;display:block}
     .camera-feed-label{font-family:var(--font-mono);font-size:10px;color:var(--muted);padding:4px 0;letter-spacing:1px}
     .camera-inner{padding:12px 16px;display:flex;gap:12px}
     .ext-ws-form{padding:12px 16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
@@ -94,7 +91,6 @@
     </div>
   </div>
   <div id="conn-status">
-    <button id="login-btn" onclick="robotLogin()">LOGIN TO ROBOT</button>
     <div id="conn-dot"></div>
     <span id="conn-text">CONNECTING...</span>
   </div>
@@ -217,55 +213,6 @@
 <script>
   // ── ROSBRIDGE ──
   var ROBOT_IP = '192.168.0.200';
-
-  function robotLogin() {
-    var btn = document.getElementById('login-btn');
-    btn.textContent = 'LOGGING IN...';
-    btn.disabled = true;
-
-    var loginUrl = 'https://192.168.0.200/auth/realms/robotnik-realm/protocol/openid-connect/auth'
-      + '?client_id=dashboard-frontend'
-      + '&redirect_uri=' + encodeURIComponent('https://192.168.0.200/app')
-      + '&response_type=code&scope=openid';
-
-    var popup = window.open(loginUrl, 'robot-login', 'width=420,height=520,left=200,top=100');
-
-    // We can't detect the popup URL change (cross-origin from github.io to 192.168.0.200).
-    // Instead, poll rosbridge — when it connects, the session cookie is set and we're done.
-    var checkTimer = setInterval(function() {
-      // If user manually closed popup with no connection, give up
-      if ((!popup || popup.closed) && !ros.isConnected) {
-        clearInterval(checkTimer);
-        onLoginDone(btn, popup);
-        return;
-      }
-      if (ros.isConnected) {
-        clearInterval(checkTimer);
-        onLoginDone(btn, popup);
-      } else {
-        // Keep retrying rosbridge connection
-        try { ros.connect('wss://' + ROBOT_IP + '/ws'); } catch(e) {}
-      }
-    }, 1000);
-  }
-
-  function onLoginDone(btn, popup) {
-    if (popup && !popup.closed) popup.close();
-    btn.textContent = 'LOGGED IN';
-    btn.className = 'authed';
-    btn.disabled = false;
-    if (window._cameraPC) { window._cameraPC.close(); window._cameraPC = null; }
-    connectCamera();
-    if (window._vncRfb) { try { window._vncRfb.disconnect(); } catch(_) {} }
-    connectVNC();
-  }
-
-  function forceVncResize() {
-    var c = document.getElementById('rviz-container');
-    var h = c.style.height || '';
-    c.style.height = (c.offsetHeight + 1) + 'px';
-    requestAnimationFrame(function() { c.style.height = h; });
-  }
   var ros = new ROSLIB.Ros({ url: 'wss://' + ROBOT_IP + '/ws' });
 
   ros.on('connection', function() {
@@ -553,20 +500,28 @@
     document.getElementById('vnc-reconnect').style.display = 'inline-block';
     return;
   }
-  const VNC_URL = 'wss://192.168.0.200/rviz_web';
+
+  const VNC_URL      = 'wss://192.168.0.200/rviz_web';
   const VNC_PASSWORD = 'RXN82ybVZbMsyriB';
+
   const container  = document.getElementById('rviz-container');
   const overlay    = document.getElementById('vnc-overlay');
   const statusText = document.getElementById('vnc-status-text');
   const spinner    = document.getElementById('vnc-spinner');
   const reconnBtn  = document.getElementById('vnc-reconnect');
-  function vncLog(msg, level) { console[level || 'log']('[VNC]', msg); statusText.textContent = msg; }
+
+  function vncLog(msg, level) {
+    console[level || 'log']('[VNC]', msg);
+    statusText.textContent = msg;
+  }
+
   function setVncStatus(msg, showSpinner, showReconnect) {
     vncLog(msg);
-    spinner.style.display   = showSpinner   ? 'block' : 'none';
+    spinner.style.display   = showSpinner   ? 'block'        : 'none';
     reconnBtn.style.display = showReconnect ? 'inline-block' : 'none';
     overlay.classList.remove('hidden');
   }
+
   function probeWebSocket() {
     return new Promise((resolve) => {
       let ws;
@@ -578,6 +533,7 @@
       ws.onclose = (e) => { clearTimeout(timer); if (e.code !== 1000) resolve({ ok: false, reason: 'Closed early code ' + e.code }); };
     });
   }
+
   window.connectVNC = async function connectVNC() {
     if (window._vncRfb) { try { window._vncRfb.disconnect(); } catch(_) {} window._vncRfb = null; }
     setVncStatus('PROBING WebSocket...', true, false);
@@ -590,28 +546,22 @@
     }
     setVncStatus('WebSocket OK - starting RFB handshake...', true, false);
     let rfb;
-    try { rfb = new RFB(container, VNC_URL, { credentials: { password: VNC_PASSWORD } }); }
-    catch(e) { setVncStatus('RFB error: ' + e.message, false, true); return; }
+    try {
+      rfb = new RFB(container, VNC_URL, { credentials: { password: VNC_PASSWORD } });
+    } catch(e) {
+      setVncStatus('RFB error: ' + e.message, false, true);
+      return;
+    }
     rfb.viewOnly = false; rfb.scaleViewport = true; rfb.clipViewport = true;
-    rfb.resizeSession = true; rfb.background = '#060910';
+    rfb.resizeSession = false; rfb.background = '#060910';
     rfb.addEventListener('connect', () => {
-      vncLog('RFB connected'); overlay.classList.add('hidden');
+      vncLog('RFB connected');
+      overlay.classList.add('hidden');
       document.getElementById('sb-map').textContent = 'VNC LIVE';
       document.getElementById('sb-map').style.color = 'var(--success)';
-      if (window._vncResizeTimer) clearInterval(window._vncResizeTimer);
-      var ticks = 0;
-      window._vncResizeTimer = setInterval(function() {
-        forceVncResize();
-        ticks++;
-        if (ticks >= 30) {
-          clearInterval(window._vncResizeTimer);
-          window._vncResizeTimer = setInterval(forceVncResize, 3000);
-        }
-      }, 500);
     });
     rfb.addEventListener('disconnect', (e) => {
       const d = e.detail || {};
-      if (window._vncResizeTimer) { clearInterval(window._vncResizeTimer); window._vncResizeTimer = null; }
       setVncStatus(d.clean ? 'VNC DISCONNECTED' : 'VNC LOST: ' + (d.reason || 'unexpected'), false, true);
       document.getElementById('sb-map').textContent = 'VNC LOST';
       document.getElementById('sb-map').style.color = 'var(--accent2)';
@@ -622,6 +572,7 @@
     });
     window._vncRfb = rfb;
   };
+
   connectVNC();
 })();
 </script>
