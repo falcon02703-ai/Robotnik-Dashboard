@@ -223,10 +223,6 @@
     btn.textContent = 'LOGGING IN...';
     btn.disabled = true;
 
-    // Use a hidden iframe pointed at the Keycloak login page.
-    // The iframe never loads the full HMI app so VNC is never triggered.
-    // We open a small popup just for credential entry, then close it the
-    // instant the post-login redirect fires.
     var loginUrl = 'https://192.168.0.200/auth/realms/robotnik-realm/protocol/openid-connect/auth'
       + '?client_id=dashboard-frontend'
       + '&redirect_uri=' + encodeURIComponent('https://192.168.0.200/app')
@@ -234,26 +230,28 @@
 
     var popup = window.open(loginUrl, 'robot-login', 'width=420,height=520,left=200,top=100');
 
-    var timer = setInterval(function() {
-      if (!popup || popup.closed) {
-        clearInterval(timer);
-        onLoginDone(btn);
-        return;
-      }
-      try {
-        var href = popup.location.href;
-        // Once we can read href without CORS error, login redirect has fired
-        if (href && href !== 'about:blank') {
+    // Wait for popup to fully load the login page before we start polling
+    // so we don't accidentally read the initial auth URL as a "change"
+    setTimeout(function() {
+      var timer = setInterval(function() {
+        if (!popup || popup.closed) {
           clearInterval(timer);
-          // Navigate away before HMI JS can execute
-          popup.location.replace('about:blank');
-          setTimeout(function() { try { popup.close(); } catch(e) {} }, 100);
           onLoginDone(btn);
+          return;
         }
-      } catch(e) {
-        // Cross-origin = still on Keycloak login page, keep waiting
-      }
-    }, 100);
+        try {
+          var href = popup.location.href;
+          // Login complete when URL has moved to /app (not the /auth/ login page)
+          if (href && href.includes('/app') && !href.includes('/auth/')) {
+            clearInterval(timer);
+            // Kill the page before HMI JS can run
+            popup.location.replace('about:blank');
+            setTimeout(function() { try { popup.close(); } catch(e) {} }, 150);
+            onLoginDone(btn);
+          }
+        } catch(e) { /* keep waiting */ }
+      }, 100);
+    }, 1500); // give login page 1.5s to fully load before polling starts
   }
 
   function onLoginDone(btn) {
@@ -605,7 +603,6 @@
       vncLog('RFB connected'); overlay.classList.add('hidden');
       document.getElementById('sb-map').textContent = 'VNC LIVE';
       document.getElementById('sb-map').style.color = 'var(--success)';
-      // Aggressively re-assert resolution: every 500ms for 15s, then every 3s
       if (window._vncResizeTimer) clearInterval(window._vncResizeTimer);
       var ticks = 0;
       window._vncResizeTimer = setInterval(function() {
