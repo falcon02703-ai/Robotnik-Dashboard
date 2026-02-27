@@ -230,39 +230,30 @@
 
     var popup = window.open(loginUrl, 'robot-login', 'width=420,height=520,left=200,top=100');
 
-    // Give the login page time to load, then record its URL as the baseline.
-    // Any URL change after that = login succeeded = close immediately.
-    setTimeout(function() {
-      var initialHref = null;
-      try { initialHref = popup.location.href; } catch(e) {}
-
-      var timer = setInterval(function() {
-        if (!popup || popup.closed) {
-          clearInterval(timer);
-          onLoginDone(btn);
-          return;
-        }
-        try {
-          var href = popup.location.href;
-          // Capture baseline on first successful read
-          if (!initialHref) { initialHref = href; return; }
-          // URL changed = post-login redirect fired
-          if (href !== initialHref) {
-            clearInterval(timer);
-            popup.location.replace('about:blank');
-            setTimeout(function() { try { popup.close(); } catch(e) {} }, 150);
-            onLoginDone(btn);
-          }
-        } catch(e) { /* keep waiting */ }
-      }, 100);
-    }, 1500);
+    // We can't detect the popup URL change (cross-origin from github.io to 192.168.0.200).
+    // Instead, poll rosbridge — when it connects, the session cookie is set and we're done.
+    var checkTimer = setInterval(function() {
+      // If user manually closed popup with no connection, give up
+      if ((!popup || popup.closed) && !ros.isConnected) {
+        clearInterval(checkTimer);
+        onLoginDone(btn, popup);
+        return;
+      }
+      if (ros.isConnected) {
+        clearInterval(checkTimer);
+        onLoginDone(btn, popup);
+      } else {
+        // Keep retrying rosbridge connection
+        try { ros.connect('wss://' + ROBOT_IP + '/ws'); } catch(e) {}
+      }
+    }, 1000);
   }
 
-  function onLoginDone(btn) {
+  function onLoginDone(btn, popup) {
+    if (popup && !popup.closed) popup.close();
     btn.textContent = 'LOGGED IN';
     btn.className = 'authed';
     btn.disabled = false;
-    ros.connect('wss://' + ROBOT_IP + '/ws');
     if (window._cameraPC) { window._cameraPC.close(); window._cameraPC = null; }
     connectCamera();
     if (window._vncRfb) { try { window._vncRfb.disconnect(); } catch(_) {} }
