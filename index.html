@@ -21,10 +21,7 @@
     .logo-icon{width:36px;height:36px;background:var(--accent);clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%)}
     .logo h1{font-size:22px;font-weight:700;letter-spacing:3px;color:var(--accent);text-transform:uppercase}
     .logo span{font-size:11px;color:var(--muted);font-family:var(--font-mono);letter-spacing:2px;display:block}
-    #conn-status{font-family:var(--font-mono);font-size:12px;display:flex;align-items:center;gap:12px}
-    #login-btn{font-family:var(--font-mono);font-size:11px;letter-spacing:1px;padding:5px 12px;background:transparent;border:1px solid var(--accent);color:var(--accent);cursor:pointer;border-radius:2px;transition:all .15s}
-    #login-btn:hover{background:var(--accent);color:var(--bg)}
-    #login-btn.authed{border-color:var(--success);color:var(--success);pointer-events:none}
+    #conn-status{font-family:var(--font-mono);font-size:12px;display:flex;align-items:center;gap:8px}
     #conn-dot{width:10px;height:10px;border-radius:50%;background:var(--muted);transition:background .3s}
     #conn-dot.connected{background:var(--success);animation:pulse 2s infinite}
     #conn-dot.error{background:var(--accent2)}
@@ -94,7 +91,6 @@
     </div>
   </div>
   <div id="conn-status">
-    <button id="login-btn" onclick="robotLogin()">LOGIN TO ROBOT</button>
     <div id="conn-dot"></div>
     <span id="conn-text">CONNECTING...</span>
   </div>
@@ -114,9 +110,8 @@
         <button id="vnc-reconnect" onclick="connectVNC()">RECONNECT</button>
       </div>
     </div>
-    <div class="map-controls" style="display:flex;align-items:center;justify-content:space-between">
+    <div class="map-controls">
       <span id="map-mode-label">&#9658; USE RVIZ TOOLS INSIDE THE VIEW TO SET GOALS</span>
-      <button onclick="cancelGoal()" style="font-family:var(--font-mono);font-size:11px;letter-spacing:1px;padding:4px 12px;background:transparent;border:1px solid var(--accent2);color:var(--accent2);cursor:pointer;border-radius:2px;transition:all .15s" onmouseover="this.style.background='var(--accent2)';this.style.color='var(--bg)'" onmouseout="this.style.background='transparent';this.style.color='var(--accent2)'">&#9632; CANCEL GOAL</button>
     </div>
   </div>
 
@@ -218,22 +213,6 @@
 <script>
   // ── ROSBRIDGE ──
   var ROBOT_IP = '192.168.0.200';
-  function robotLogin() {
-    var popup = window.open('https://192.168.0.200/app','robot-login','width=520,height=620,left=200,top=100');
-    var timer = setInterval(function() {
-      if (!popup || popup.closed) {
-        clearInterval(timer);
-        document.getElementById('login-btn').textContent = 'LOGGED IN';
-        document.getElementById('login-btn').className = 'authed';
-        ros.connect('wss://' + ROBOT_IP + '/rosbridge');
-        if (window._cameraPC) { window._cameraPC.close(); window._cameraPC = null; }
-        connectCamera();
-        if (window._vncRfb) { try { window._vncRfb.disconnect(); } catch(_) {} }
-        connectVNC();
-      }
-    }, 500);
-  }
-
   var ros = new ROSLIB.Ros({ url: 'wss://' + ROBOT_IP + '/ws' });
 
   ros.on('connection', function() {
@@ -257,14 +236,13 @@
   });
 
   // ── TOPICS ──
-  var cmdVelTopic, goalTopic, initialPoseTopic, rmsCancelTopic;
+  var cmdVelTopic, goalTopic, initialPoseTopic;
 
   function initTopics() {
     cmdVelTopic = new ROSLIB.Topic({ ros:ros, name:'/robot/web_teleop/cmd_vel', messageType:'geometry_msgs/Twist' });
 
     // TASK 1 - navigation goal
-    goalTopic = new ROSLIB.Topic({ ros:ros, name:'/robot/rms/simple_goal', messageType:'geometry_msgs/PoseStamped' });
-    rmsCancelTopic = new ROSLIB.Topic({ ros:ros, name:'/robot/rms/action/cancel', messageType:'actionlib_msgs/GoalID' });
+    goalTopic = new ROSLIB.Topic({ ros:ros, name:'/robot/move_base_flex/move_base_simple/goal', messageType:'geometry_msgs/PoseStamped' });
 
     // TASK 3 - initial pose
     initialPoseTopic = new ROSLIB.Topic({ ros:ros, name:'/robot/initialpose', messageType:'geometry_msgs/PoseWithCovarianceStamped' });
@@ -319,21 +297,10 @@
   // RViz "2D Nav Goal" tool inside the VNC view directly, or use the form fields below.
 
   // ── TASK 1: GOAL POSE ──
-  function cancelGoal() {
-    if (rmsCancelTopic) {
-      rmsCancelTopic.publish(new ROSLIB.Message({}));
-      showToast('Goal cancelled');
-      document.getElementById('sb-goal').textContent = '--';
-      document.getElementById('sb-goal').style.color = 'var(--muted)';
-    } else {
-      showToast('Not connected to ROS');
-    }
-  }
-
   function publishGoalPose(x, y, yaw) {
     if (!goalTopic) { showToast('Not connected to ROS'); return; }
     goalTopic.publish(new ROSLIB.Message({
-      header: { frame_id:'robot_map', stamp:{ secs:Math.floor(Date.now()/1000), nsecs:(Date.now()%1000)*1e6 } },
+      header: { frame_id:'map', stamp:{ secs:0, nsecs:0 } },
       pose: { position:{ x:x, y:y, z:0 }, orientation:yawToQuaternion(yaw) }
     }));
     var label = 'x:' + x.toFixed(2) + ' y:' + y.toFixed(2);
@@ -349,7 +316,7 @@
     var y   = parseFloat(document.getElementById('init-y').value)   || 0;
     var yaw = parseFloat(document.getElementById('init-yaw').value) || 0;
     initialPoseTopic.publish(new ROSLIB.Message({
-      header: { frame_id:'robot_map', stamp:{ secs:Math.floor(Date.now()/1000), nsecs:(Date.now()%1000)*1e6 } },
+      header: { frame_id:'map', stamp:{ secs:0, nsecs:0 } },
       pose: {
         pose: { position:{ x:x, y:y, z:0 }, orientation:yawToQuaternion(yaw) },
         covariance: [0.25,0,0,0,0,0, 0,0.25,0,0,0,0, 0,0,0,0,0,0, 0,0,0,0,0,0, 0,0,0,0,0,0, 0,0,0,0,0,0.0685]
@@ -533,20 +500,28 @@
     document.getElementById('vnc-reconnect').style.display = 'inline-block';
     return;
   }
-  const VNC_URL = 'wss://192.168.0.200/rviz_web';
+
+  const VNC_URL      = 'wss://192.168.0.200/rviz_web';
   const VNC_PASSWORD = 'RXN82ybVZbMsyriB';
+
   const container  = document.getElementById('rviz-container');
   const overlay    = document.getElementById('vnc-overlay');
   const statusText = document.getElementById('vnc-status-text');
   const spinner    = document.getElementById('vnc-spinner');
   const reconnBtn  = document.getElementById('vnc-reconnect');
-  function vncLog(msg, level) { console[level || 'log']('[VNC]', msg); statusText.textContent = msg; }
+
+  function vncLog(msg, level) {
+    console[level || 'log']('[VNC]', msg);
+    statusText.textContent = msg;
+  }
+
   function setVncStatus(msg, showSpinner, showReconnect) {
     vncLog(msg);
-    spinner.style.display   = showSpinner   ? 'block' : 'none';
+    spinner.style.display   = showSpinner   ? 'block'        : 'none';
     reconnBtn.style.display = showReconnect ? 'inline-block' : 'none';
     overlay.classList.remove('hidden');
   }
+
   function probeWebSocket() {
     return new Promise((resolve) => {
       let ws;
@@ -558,6 +533,7 @@
       ws.onclose = (e) => { clearTimeout(timer); if (e.code !== 1000) resolve({ ok: false, reason: 'Closed early code ' + e.code }); };
     });
   }
+
   window.connectVNC = async function connectVNC() {
     if (window._vncRfb) { try { window._vncRfb.disconnect(); } catch(_) {} window._vncRfb = null; }
     setVncStatus('PROBING WebSocket...', true, false);
@@ -570,12 +546,17 @@
     }
     setVncStatus('WebSocket OK - starting RFB handshake...', true, false);
     let rfb;
-    try { rfb = new RFB(container, VNC_URL, { credentials: { password: VNC_PASSWORD } }); }
-    catch(e) { setVncStatus('RFB error: ' + e.message, false, true); return; }
+    try {
+      rfb = new RFB(container, VNC_URL, { credentials: { password: VNC_PASSWORD } });
+    } catch(e) {
+      setVncStatus('RFB error: ' + e.message, false, true);
+      return;
+    }
     rfb.viewOnly = false; rfb.scaleViewport = true; rfb.clipViewport = true;
-    rfb.resizeSession = false; rfb.background = '#060910';
+    rfb.resizeSession = true; rfb.background = '#060910';
     rfb.addEventListener('connect', () => {
-      vncLog('RFB connected'); overlay.classList.add('hidden');
+      vncLog('RFB connected');
+      overlay.classList.add('hidden');
       document.getElementById('sb-map').textContent = 'VNC LIVE';
       document.getElementById('sb-map').style.color = 'var(--success)';
     });
@@ -591,6 +572,7 @@
     });
     window._vncRfb = rfb;
   };
+
   connectVNC();
 })();
 </script>
