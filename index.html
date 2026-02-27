@@ -230,9 +230,12 @@
 
     var popup = window.open(loginUrl, 'robot-login', 'width=420,height=520,left=200,top=100');
 
-    // Wait for popup to fully load the login page before we start polling
-    // so we don't accidentally read the initial auth URL as a "change"
+    // Give the login page time to load, then record its URL as the baseline.
+    // Any URL change after that = login succeeded = close immediately.
     setTimeout(function() {
+      var initialHref = null;
+      try { initialHref = popup.location.href; } catch(e) {}
+
       var timer = setInterval(function() {
         if (!popup || popup.closed) {
           clearInterval(timer);
@@ -241,17 +244,18 @@
         }
         try {
           var href = popup.location.href;
-          // Login complete when URL has moved to /app (not the /auth/ login page)
-          if (href && href.includes('/app') && !href.includes('/auth/')) {
+          // Capture baseline on first successful read
+          if (!initialHref) { initialHref = href; return; }
+          // URL changed = post-login redirect fired
+          if (href !== initialHref) {
             clearInterval(timer);
-            // Kill the page before HMI JS can run
             popup.location.replace('about:blank');
             setTimeout(function() { try { popup.close(); } catch(e) {} }, 150);
             onLoginDone(btn);
           }
         } catch(e) { /* keep waiting */ }
       }, 100);
-    }, 1500); // give login page 1.5s to fully load before polling starts
+    }, 1500);
   }
 
   function onLoginDone(btn) {
