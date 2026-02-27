@@ -384,7 +384,7 @@
     el.textContent = '[' + new Date().toLocaleTimeString() + '] ' + msg + '\n' + el.textContent;
   }
   function toggleExternalWS() {
-    if (extWS && extWS.readyState === WebSocket.OPEN) { extWS.close(); return; }
+    if (extWS && extWS.readyState === WebSocket.OPEN) { extWS._userClosed = true; extWS.close(); return; }
     var url = document.getElementById('ext-ws-url').value.trim();
     try { extWS = new WebSocket(url); } catch(e) { logExt('ERROR: ' + e.message); return; }
     extWS.onopen = function() {
@@ -417,6 +417,13 @@
       document.getElementById('sb-ext').textContent = 'DISCONNECTED';
       document.getElementById('sb-ext').style.color = 'var(--muted)';
       logExt('Disconnected');
+      if (extWS._userClosed) return;
+      logExt('Reconnecting in 3s...');
+      setTimeout(function() {
+        if (!extWS || extWS._userClosed) return;
+        logExt('Reconnecting...');
+        toggleExternalWS();
+      }, 3000);
     };
   }
 
