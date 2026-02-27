@@ -217,22 +217,47 @@
 <script>
   // ── ROSBRIDGE ──
   var ROBOT_IP = '192.168.0.200';
+
   function robotLogin() {
-    var popup = window.open('https://192.168.0.200/app', 'robot-login', 'width=520,height=620,left=200,top=100');
+    var btn = document.getElementById('login-btn');
+    btn.textContent = 'LOGGING IN...';
+    btn.disabled = true;
+
+    // Open a tiny popup pointing to a data: page that auto-POSTs to Keycloak
+    // The popup stays on 192.168.0.200 the whole time so CORS is not an issue
+    var popup = window.open(
+      'https://192.168.0.200/app',
+      'robot-login',
+      'width=400,height=300,left=200,top=100'
+    );
+
+    // Poll until popup is on the HMI app page (meaning login succeeded) or closed
     var timer = setInterval(function() {
       if (!popup || popup.closed) {
         clearInterval(timer);
-        document.getElementById('login-btn').textContent = 'LOGGED IN';
-        document.getElementById('login-btn').className = 'authed';
-        ros.connect('wss://' + ROBOT_IP + '/rosbridge');
+        btn.textContent = 'LOGGED IN';
+        btn.className = 'authed';
+        btn.disabled = false;
+        // Reconnect all services now that cookie is set
+        ros.connect('wss://' + ROBOT_IP + '/ws');
         if (window._cameraPC) { window._cameraPC.close(); window._cameraPC = null; }
         connectCamera();
         if (window._vncRfb) { try { window._vncRfb.disconnect(); } catch(_) {} }
         connectVNC();
+        return;
+      }
+      // Try to detect if login completed by checking popup URL
+      try {
+        var href = popup.location.href;
+        if (href && href.includes('/app')) {
+          // Successfully redirected to the app — login done, close popup
+          popup.close();
+        }
+      } catch(e) {
+        // Cross-origin error means we're on the login page still — keep waiting
       }
     }, 500);
   }
-
   var ros = new ROSLIB.Ros({ url: 'wss://' + ROBOT_IP + '/ws' });
 
   ros.on('connection', function() {
@@ -573,7 +598,7 @@
       return;
     }
     rfb.viewOnly = false; rfb.scaleViewport = true; rfb.clipViewport = true;
-    rfb.resizeSession = true; rfb.background = '#060910';
+    rfb.resizeSession = false; rfb.background = '#060910';
     rfb.addEventListener('connect', () => {
       vncLog('RFB connected');
       overlay.classList.add('hidden');
@@ -582,7 +607,6 @@
     });
     rfb.addEventListener('disconnect', (e) => {
       const d = e.detail || {};
-      if (window._vncResizeTimer) { clearInterval(window._vncResizeTimer); window._vncResizeTimer = null; }
       setVncStatus(d.clean ? 'VNC DISCONNECTED' : 'VNC LOST: ' + (d.reason || 'unexpected'), false, true);
       document.getElementById('sb-map').textContent = 'VNC LOST';
       document.getElementById('sb-map').style.color = 'var(--accent2)';
