@@ -223,40 +223,46 @@
     btn.textContent = 'LOGGING IN...';
     btn.disabled = true;
 
-    // Open a tiny popup pointing to a data: page that auto-POSTs to Keycloak
-    // The popup stays on 192.168.0.200 the whole time so CORS is not an issue
-    var popup = window.open(
-      'https://192.168.0.200/app',
-      'robot-login',
-      'width=400,height=300,left=200,top=100'
-    );
+    // Open the Keycloak login page directly — NOT the HMI app.
+    // This way the HMI never loads and its VNC never connects.
+    var loginUrl = 'https://192.168.0.200/auth/realms/robotnik-realm/protocol/openid-connect/auth'
+      + '?client_id=dashboard-frontend'
+      + '&redirect_uri=' + encodeURIComponent('https://192.168.0.200/app')
+      + '&response_type=code&scope=openid';
 
-    // Poll until popup is on the HMI app page (meaning login succeeded) or closed
+    var popup = window.open(loginUrl, 'robot-login', 'width=420,height=520,left=200,top=100');
+
     var timer = setInterval(function() {
       if (!popup || popup.closed) {
         clearInterval(timer);
-        btn.textContent = 'LOGGED IN';
-        btn.className = 'authed';
-        btn.disabled = false;
-        // Reconnect all services now that cookie is set
-        ros.connect('wss://' + ROBOT_IP + '/ws');
-        if (window._cameraPC) { window._cameraPC.close(); window._cameraPC = null; }
-        connectCamera();
-        if (window._vncRfb) { try { window._vncRfb.disconnect(); } catch(_) {} }
-        connectVNC();
+        onLoginDone(btn);
         return;
       }
-      // Try to detect if login completed by checking popup URL
       try {
+        // This throws a cross-origin error while on the Keycloak login page.
+        // The moment we can read the href without error, the redirect has
+        // fired and the cookie is set — close immediately before HMI loads.
         var href = popup.location.href;
-        if (href && href.includes('/app')) {
-          // Successfully redirected to the app — login done, close popup
-          popup.close();
+        if (href) {
+          popup.close(); // Close before HMI initialises
+          clearInterval(timer);
+          onLoginDone(btn);
         }
       } catch(e) {
-        // Cross-origin error means we're on the login page still — keep waiting
+        // Still on Keycloak login page — keep waiting
       }
-    }, 500);
+    }, 200);
+  }
+
+  function onLoginDone(btn) {
+    btn.textContent = 'LOGGED IN';
+    btn.className = 'authed';
+    btn.disabled = false;
+    ros.connect('wss://' + ROBOT_IP + '/ws');
+    if (window._cameraPC) { window._cameraPC.close(); window._cameraPC = null; }
+    connectCamera();
+    if (window._vncRfb) { try { window._vncRfb.disconnect(); } catch(_) {} }
+    connectVNC();
   }
   var ros = new ROSLIB.Ros({ url: 'wss://' + ROBOT_IP + '/ws' });
 
