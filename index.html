@@ -31,8 +31,8 @@
     .panel-header{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--border);background:rgba(0,229,255,.04)}
     .panel-title{font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--accent)}
     .panel-badge{font-family:var(--font-mono);font-size:10px;color:var(--muted);background:rgba(255,255,255,.05);padding:2px 8px;border-radius:2px}
-    .map-panel{grid-column:1/-1}
-    #rviz-container{width:100%;height:600px;background:#060910;display:block;position:relative;overflow:hidden}
+    .map-panel{grid-column:1}
+    #rviz-container{width:100%;height:500px;background:#060910;display:block;position:relative;overflow:hidden}
     #rviz-container > div{position:absolute!important;top:0!important;left:0!important;width:100%!important;height:100%!important;margin:0!important}
     #rviz-container canvas{display:block;width:100%!important;height:100%!important;margin:0!important}
     #vnc-overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:rgba(6,9,16,.85);font-family:var(--font-mono);color:var(--muted);font-size:12px;z-index:10;transition:opacity .4s}
@@ -47,7 +47,7 @@
     .mode-btn.active{border-color:var(--accent);color:var(--accent);background:rgba(0,229,255,.08)}
     .mode-btn:hover{border-color:var(--text);color:var(--text)}
     #map-mode-label{font-family:var(--font-mono);font-size:11px;color:var(--warn);margin-left:auto}
-    .right-col{grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+    .right-col{grid-column:2;display:flex;flex-direction:column;gap:16px}
     .pose-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border)}
     .pose-cell{background:var(--surface);padding:10px 14px}
     .pose-label{font-family:var(--font-mono);font-size:10px;color:var(--muted);letter-spacing:1px;margin-bottom:4px}
@@ -553,7 +553,7 @@
       return;
     }
     rfb.viewOnly = false; rfb.scaleViewport = true; rfb.clipViewport = true;
-    rfb.resizeSession = false; rfb.background = '#060910';
+    rfb.resizeSession = true; rfb.background = '#060910';
     rfb.addEventListener('connect', () => {
       vncLog('RFB connected');
       overlay.classList.add('hidden');
@@ -562,6 +562,7 @@
     });
     rfb.addEventListener('disconnect', (e) => {
       const d = e.detail || {};
+      if (window._vncResizeTimer) { clearInterval(window._vncResizeTimer); window._vncResizeTimer = null; }
       setVncStatus(d.clean ? 'VNC DISCONNECTED' : 'VNC LOST: ' + (d.reason || 'unexpected'), false, true);
       document.getElementById('sb-map').textContent = 'VNC LOST';
       document.getElementById('sb-map').style.color = 'var(--accent2)';
