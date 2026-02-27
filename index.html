@@ -21,7 +21,10 @@
     .logo-icon{width:36px;height:36px;background:var(--accent);clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%)}
     .logo h1{font-size:22px;font-weight:700;letter-spacing:3px;color:var(--accent);text-transform:uppercase}
     .logo span{font-size:11px;color:var(--muted);font-family:var(--font-mono);letter-spacing:2px;display:block}
-    #conn-status{font-family:var(--font-mono);font-size:12px;display:flex;align-items:center;gap:8px}
+    #conn-status{font-family:var(--font-mono);font-size:12px;display:flex;align-items:center;gap:12px}
+    #login-btn{font-family:var(--font-mono);font-size:11px;letter-spacing:1px;padding:5px 12px;background:transparent;border:1px solid var(--accent);color:var(--accent);cursor:pointer;border-radius:2px;transition:all .15s}
+    #login-btn:hover{background:var(--accent);color:var(--bg)}
+    #login-btn.authed{border-color:var(--success);color:var(--success);pointer-events:none}
     #conn-dot{width:10px;height:10px;border-radius:50%;background:var(--muted);transition:background .3s}
     #conn-dot.connected{background:var(--success);animation:pulse 2s infinite}
     #conn-dot.error{background:var(--accent2)}
@@ -91,6 +94,7 @@
     </div>
   </div>
   <div id="conn-status">
+    <button id="login-btn" onclick="robotLogin()">LOGIN TO ROBOT</button>
     <div id="conn-dot"></div>
     <span id="conn-text">CONNECTING...</span>
   </div>
@@ -213,6 +217,31 @@
 <script>
   // ── ROSBRIDGE ──
   var ROBOT_IP = '192.168.0.200';
+  // ── ROBOT LOGIN ──────────────────────────────────────────────────────────
+  // Opens the Robotnik HMI login page in a small popup. Once the user
+  // authenticates there, the session cookie is set and all connections work.
+  function robotLogin() {
+    var popup = window.open(
+      'https://192.168.0.200/app',
+      'robot-login',
+      'width=520,height=620,left=200,top=100'
+    );
+    // Poll until popup closes, then retry all connections
+    var timer = setInterval(function() {
+      if (!popup || popup.closed) {
+        clearInterval(timer);
+        document.getElementById('login-btn').textContent = 'LOGGED IN';
+        document.getElementById('login-btn').className = 'authed';
+        // Reconnect everything
+        ros.connect('wss://' + ROBOT_IP + '/rosbridge');
+        if (window._cameraPC) { window._cameraPC.close(); window._cameraPC = null; }
+        connectCamera();
+        if (window._vncRfb) { try { window._vncRfb.disconnect(); } catch(_) {} }
+        connectVNC();
+      }
+    }, 500);
+  }
+
   var ros = new ROSLIB.Ros({ url: 'wss://' + ROBOT_IP + '/ws' });
 
   ros.on('connection', function() {
