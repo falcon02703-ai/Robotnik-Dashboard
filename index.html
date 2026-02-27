@@ -217,31 +217,6 @@
 <script>
   // ── ROSBRIDGE ──
   var ROBOT_IP = '192.168.0.200';
-  // ── ROBOT LOGIN ──────────────────────────────────────────────────────────
-  // Opens the Robotnik HMI login page in a small popup. Once the user
-  // authenticates there, the session cookie is set and all connections work.
-  function robotLogin() {
-    var popup = window.open(
-      'https://192.168.0.200/app',
-      'robot-login',
-      'width=520,height=620,left=200,top=100'
-    );
-    // Poll until popup closes, then retry all connections
-    var timer = setInterval(function() {
-      if (!popup || popup.closed) {
-        clearInterval(timer);
-        document.getElementById('login-btn').textContent = 'LOGGED IN';
-        document.getElementById('login-btn').className = 'authed';
-        // Reconnect everything
-        ros.connect('wss://' + ROBOT_IP + '/rosbridge');
-        if (window._cameraPC) { window._cameraPC.close(); window._cameraPC = null; }
-        connectCamera();
-        if (window._vncRfb) { try { window._vncRfb.disconnect(); } catch(_) {} }
-        connectVNC();
-      }
-    }, 500);
-  }
-
   var ros = new ROSLIB.Ros({ url: 'wss://' + ROBOT_IP + '/ws' });
 
   ros.on('connection', function() {
@@ -265,13 +240,14 @@
   });
 
   // ── TOPICS ──
-  var cmdVelTopic, goalTopic, initialPoseTopic;
+  var cmdVelTopic, goalTopic, initialPoseTopic, rmsCancelTopic;
 
   function initTopics() {
     cmdVelTopic = new ROSLIB.Topic({ ros:ros, name:'/robot/web_teleop/cmd_vel', messageType:'geometry_msgs/Twist' });
 
     // TASK 1 - navigation goal
-    goalTopic = new ROSLIB.Topic({ ros:ros, name:'/robot/move_base_flex/move_base_simple/goal', messageType:'geometry_msgs/PoseStamped' });
+    goalTopic = new ROSLIB.Topic({ ros:ros, name:'/robot/rms/simple_goal', messageType:'geometry_msgs/PoseStamped' });
+    rmsCancelTopic = new ROSLIB.Topic({ ros:ros, name:'/robot/rms/action/cancel', messageType:'actionlib_msgs/GoalID' });
 
     // TASK 3 - initial pose
     initialPoseTopic = new ROSLIB.Topic({ ros:ros, name:'/robot/initialpose', messageType:'geometry_msgs/PoseWithCovarianceStamped' });
@@ -328,9 +304,11 @@
   // ── TASK 1: GOAL POSE ──
   function publishGoalPose(x, y, yaw) {
     if (!goalTopic) { showToast('Not connected to ROS'); return; }
+    // Cancel any queued RMS task before sending new goal
+    if (rmsCancelTopic) rmsCancelTopic.publish(new ROSLIB.Message({}));
     var now = Date.now(); var secs = Math.floor(now/1000); var nsecs = (now % 1000) * 1e6;
     goalTopic.publish(new ROSLIB.Message({
-      header: { frame_id:'map', stamp:{ secs:secs, nsecs:nsecs } },
+      header: { frame_id:'robot_map', stamp:{ secs:secs, nsecs:nsecs } },
       pose: { position:{ x:x, y:y, z:0 }, orientation:yawToQuaternion(yaw) }
     }));
     var label = 'x:' + x.toFixed(2) + ' y:' + y.toFixed(2);
@@ -346,7 +324,7 @@
     var y   = parseFloat(document.getElementById('init-y').value)   || 0;
     var yaw = parseFloat(document.getElementById('init-yaw').value) || 0;
     initialPoseTopic.publish(new ROSLIB.Message({
-      header: { frame_id:'map', stamp:{ secs:secs, nsecs:nsecs } },
+      header: { frame_id:'robot_map', stamp:{ secs:Math.floor(Date.now()/1000), nsecs:(Date.now()%1000)*1e6 } },
       pose: {
         pose: { position:{ x:x, y:y, z:0 }, orientation:yawToQuaternion(yaw) },
         covariance: [0.25,0,0,0,0,0, 0,0.25,0,0,0,0, 0,0,0,0,0,0, 0,0,0,0,0,0, 0,0,0,0,0,0, 0,0,0,0,0,0.0685]
@@ -530,28 +508,20 @@
     document.getElementById('vnc-reconnect').style.display = 'inline-block';
     return;
   }
-
-  const VNC_URL      = 'wss://192.168.0.200/rviz_web';
+  const VNC_URL = 'wss://192.168.0.200/rviz_web';
   const VNC_PASSWORD = 'RXN82ybVZbMsyriB';
-
   const container  = document.getElementById('rviz-container');
   const overlay    = document.getElementById('vnc-overlay');
   const statusText = document.getElementById('vnc-status-text');
   const spinner    = document.getElementById('vnc-spinner');
   const reconnBtn  = document.getElementById('vnc-reconnect');
-
-  function vncLog(msg, level) {
-    console[level || 'log']('[VNC]', msg);
-    statusText.textContent = msg;
-  }
-
+  function vncLog(msg, level) { console[level || 'log']('[VNC]', msg); statusText.textContent = msg; }
   function setVncStatus(msg, showSpinner, showReconnect) {
     vncLog(msg);
-    spinner.style.display   = showSpinner   ? 'block'        : 'none';
+    spinner.style.display   = showSpinner   ? 'block' : 'none';
     reconnBtn.style.display = showReconnect ? 'inline-block' : 'none';
     overlay.classList.remove('hidden');
   }
-
   function probeWebSocket() {
     return new Promise((resolve) => {
       let ws;
@@ -563,7 +533,6 @@
       ws.onclose = (e) => { clearTimeout(timer); if (e.code !== 1000) resolve({ ok: false, reason: 'Closed early code ' + e.code }); };
     });
   }
-
   window.connectVNC = async function connectVNC() {
     if (window._vncRfb) { try { window._vncRfb.disconnect(); } catch(_) {} window._vncRfb = null; }
     setVncStatus('PROBING WebSocket...', true, false);
@@ -576,17 +545,12 @@
     }
     setVncStatus('WebSocket OK - starting RFB handshake...', true, false);
     let rfb;
-    try {
-      rfb = new RFB(container, VNC_URL, { credentials: { password: VNC_PASSWORD } });
-    } catch(e) {
-      setVncStatus('RFB error: ' + e.message, false, true);
-      return;
-    }
+    try { rfb = new RFB(container, VNC_URL, { credentials: { password: VNC_PASSWORD } }); }
+    catch(e) { setVncStatus('RFB error: ' + e.message, false, true); return; }
     rfb.viewOnly = false; rfb.scaleViewport = true; rfb.clipViewport = true;
     rfb.resizeSession = false; rfb.background = '#060910';
     rfb.addEventListener('connect', () => {
-      vncLog('RFB connected');
-      overlay.classList.add('hidden');
+      vncLog('RFB connected'); overlay.classList.add('hidden');
       document.getElementById('sb-map').textContent = 'VNC LIVE';
       document.getElementById('sb-map').style.color = 'var(--success)';
     });
@@ -602,7 +566,6 @@
     });
     window._vncRfb = rfb;
   };
-
   connectVNC();
 })();
 </script>
