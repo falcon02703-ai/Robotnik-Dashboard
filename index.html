@@ -416,17 +416,20 @@
       });
 
     // ── UNCHARGE STATE — true completion: READY after a running procedure ──
-    // state 300 = READY, but only unlock once we were actively undocking
+    // state 300 = READY, but only unlock once we were actively undocking.
+    // Small delay added since the state flips slightly before the robot fully stops.
     new ROSLIB.Topic({ ros:ros, name:'/robot/robot_local_control/NavigationComponent/UnchargeComponent/state', messageType:'robotnik_msgs/State' })
       .subscribe(function(msg) {
         if (window._undocking && msg.state === 300) {
           window._undocking = false;
-          setTeleopLocked(false);
-          var btn = document.getElementById('undock-btn');
-          btn.classList.remove('running');
-          btn.disabled = false;
-          document.getElementById('undock-btn-label').textContent = 'UNDOCK TO ENABLE TELEOP';
-          showToast('Undocked — teleop ready');
+          setTimeout(function() {
+            setTeleopLocked(false);
+            var btn = document.getElementById('undock-btn');
+            btn.classList.remove('running');
+            btn.disabled = false;
+            document.getElementById('undock-btn-label').textContent = 'UNDOCK TO ENABLE TELEOP';
+            showToast('Undocked — teleop ready');
+          }, 2000);
         }
       });
   }
