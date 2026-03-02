@@ -405,7 +405,15 @@
     // Navigation state
     new ROSLIB.Topic({ ros:ros, name:'/robot/robot_local_control/NavigationComponent/state', messageType:'robotnik_msgs/State' })
       .subscribe(function(msg) {
-        document.getElementById('navStatus').textContent = msg.state_description || msg.state || '--';
+        var desc = msg.state_description || msg.state || '--';
+        var el = document.getElementById('navStatus');
+        el.textContent = desc;
+        var upper = String(desc).toUpperCase();
+        if (upper === 'READY' || upper === 'STANDBY') {
+          el.style.color = 'var(--success)';
+        } else {
+          el.style.color = 'var(--warn)';
+        }
       });
 
     // ── DOCKING STATUS — used only for badge + undock button visibility ──
@@ -430,6 +438,7 @@
             btn.classList.remove('running');
             btn.disabled = false;
             document.getElementById('undock-btn-label').textContent = 'UNDOCK TO ENABLE TELEOP';
+            document.getElementById('undock-bar').style.display = 'none';
             showToast('Undocked — teleop ready');
           }, 15000);
         }
@@ -545,7 +554,7 @@
     } else {
       badge.textContent = 'UNDOCKED';
       badge.className = 'dock-status-badge undocked';
-      undockBar.style.display = 'none';
+      if (!window._undocking && !window._undockDelay) undockBar.style.display = 'none';
       if (!window._undocking && !window._undockDelay) setTeleopLocked(false);
     }
   }
