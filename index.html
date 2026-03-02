@@ -405,24 +405,16 @@
     // Navigation state
     new ROSLIB.Topic({ ros:ros, name:'/robot/robot_local_control/NavigationComponent/state', messageType:'robotnik_msgs/State' })
       .subscribe(function(msg) {
-        var desc = msg.state_description || msg.state || '--';
-        var el = document.getElementById('navStatus');
-        var upper = String(desc).toUpperCase();
-        el.textContent = upper === 'EMERGENCY' ? 'EMERG. STOP' : desc;
-        if (upper === 'READY' || upper === 'STANDBY') {
-          el.style.color = 'var(--success)';
-        } else if (upper === 'EMERGENCY' || upper === 'FAILURE') {
-          el.style.color = 'var(--accent2)';
-        } else {
-          el.style.color = 'var(--warn)';
-        }
+        updateNavStatus(msg.state_description || msg.state || '--');
       });
 
-    // ── DOCKING STATUS — used only for badge + undock button visibility ──
+    // ── DOCKING STATUS — used for badge, undock button, and nav status override ──
     new ROSLIB.Topic({ ros:ros, name:'/robot/charge_manager/docking_status', messageType:'robotnik_msgs/BatteryDockingStatusStamped' })
       .subscribe(function(msg) {
         var docked = msg.status && msg.status.contact_relay_status === true;
+        window._isDocked = docked;
         updateDockUI(docked);
+        updateNavStatus(); // re-render nav status with updated dock knowledge
       });
 
     // ── UNCHARGE STATE — true completion: READY after a running procedure ──
@@ -543,7 +535,29 @@
 
   // ── DOCKING UI HELPERS ──
   window._undocking = false;
-  window._undockDelay = false; // true during the post-completion delay period
+  window._undockDelay = false;
+  window._isDocked = false;
+  window._lastNavDesc = '--';
+
+  function updateNavStatus(desc) {
+    if (desc !== undefined) window._lastNavDesc = desc;
+    var el = document.getElementById('navStatus');
+    var upper = String(window._lastNavDesc).toUpperCase();
+    // Override: if docked and nav stack is just sitting idle, show CHARGING
+    if (window._isDocked && (upper === 'STANDBY' || upper === 'READY')) {
+      el.textContent = 'CHARGING';
+      el.style.color = 'var(--warn)';
+      return;
+    }
+    el.textContent = upper === 'EMERGENCY' ? 'EMERG. STOP' : window._lastNavDesc;
+    if (upper === 'READY' || upper === 'STANDBY') {
+      el.style.color = 'var(--success)';
+    } else if (upper === 'EMERGENCY' || upper === 'FAILURE') {
+      el.style.color = 'var(--accent2)';
+    } else {
+      el.style.color = 'var(--warn)';
+    }
+  } // true during the post-completion delay period
 
   function updateDockUI(docked) {
     var badge = document.getElementById('dock-badge');
