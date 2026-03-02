@@ -34,8 +34,9 @@
     .panel-header{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--border);background:rgba(0,229,255,.04)}
     .panel-title{font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--accent)}
     .panel-badge{font-family:var(--font-mono);font-size:10px;color:var(--muted);background:rgba(255,255,255,.05);padding:2px 8px;border-radius:2px}
-    .map-panel{grid-column:1;overflow:hidden;min-height:0}
-    #rviz-container{width:100%;height:720px;max-height:720px;background:#060910;display:block;position:relative;overflow:hidden;contain:strict}
+    .map-panel{grid-column:1;overflow:hidden}
+    /* header≈65 + tabs≈40 + panel-header≈41 + map-controls≈44 + status-bar≈38 + grid padding+gap≈36 = ~264px */
+    #rviz-container{width:100%;height:calc(100vh - 264px);min-height:400px;max-height:none;background:#060910;display:block;position:relative;overflow:hidden;contain:strict}
     #rviz-container > div{position:absolute!important;top:0!important;left:0!important;width:100%!important;height:100%!important;margin:0!important;overflow:hidden!important}
     #rviz-container canvas{display:block;width:100%!important;height:100%!important;margin:0!important;object-fit:contain!important;max-height:100%!important}
     #vnc-overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:rgba(6,9,16,.85);font-family:var(--font-mono);color:var(--muted);font-size:12px;z-index:10;transition:opacity .4s}
@@ -169,20 +170,6 @@
       </div>
     </div>
 
-    <!-- TASK 3: INITIAL POSE -->
-    <div class="panel">
-      <div class="panel-header">
-        <span class="panel-title">Set Initial Pose</span>
-        <span class="panel-badge">/robot/initialpose</span>
-      </div>
-      <div class="init-pose-form">
-        <input id="init-x"   type="number" step="0.01" placeholder="X (m)"     value="0.0">
-        <input id="init-y"   type="number" step="0.01" placeholder="Y (m)"     value="0.0">
-        <input id="init-yaw" type="number" step="0.01" placeholder="Yaw (rad)" value="0.0">
-        <button class="btn-primary" onclick="publishInitialPose()">PUBLISH INITIAL POSE</button>
-      </div>
-    </div>
-
     <!-- TASK 2: EXTERNAL WS -->
     <div class="panel">
       <div class="panel-header">
@@ -214,6 +201,20 @@
         <div></div>
       </div>
       <p style="font-family:var(--font-mono);font-size:10px;color:var(--muted);text-align:center;padding-bottom:10px">Arrow keys also supported</p>
+    </div>
+
+    <!-- TASK 3: INITIAL POSE -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Set Initial Pose</span>
+        <span class="panel-badge">/robot/initialpose</span>
+      </div>
+      <div class="init-pose-form">
+        <input id="init-x"   type="number" step="0.01" placeholder="X (m)"     value="0.0">
+        <input id="init-y"   type="number" step="0.01" placeholder="Y (m)"     value="0.0">
+        <input id="init-yaw" type="number" step="0.01" placeholder="Yaw (rad)" value="0.0">
+        <button class="btn-primary" onclick="publishInitialPose()">PUBLISH INITIAL POSE</button>
+      </div>
     </div>
   </div><!-- /.right-col -->
 
