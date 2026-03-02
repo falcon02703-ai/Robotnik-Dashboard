@@ -30,11 +30,11 @@
     #conn-dot.error{background:var(--accent2)}
     @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(0,255,136,.4)}50%{box-shadow:0 0 0 6px rgba(0,255,136,0)}}
     .main-grid{display:grid;grid-template-columns:1fr 420px;gap:16px;padding:16px 28px}
-    .panel{background:var(--surface);border:1px solid var(--border);border-radius:4px;overflow:hidden}
-    .panel-header{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--border);background:rgba(0,229,255,.04)}
+    .panel{background:var(--surface);border:1px solid var(--border);border-radius:4px}
+    .panel-header{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--border);background:rgba(0,229,255,.04);border-radius:4px 4px 0 0}
     .panel-title{font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--accent)}
     .panel-badge{font-family:var(--font-mono);font-size:10px;color:var(--muted);background:rgba(255,255,255,.05);padding:2px 8px;border-radius:2px}
-    .map-panel{grid-column:1;overflow:hidden}
+    .map-panel{grid-column:1;overflow:hidden;border-radius:4px}
     /* header≈65 + tabs≈40 + panel-header≈41 + map-controls≈44 + status-bar≈38 + grid padding+gap≈36 = ~264px */
     #rviz-container{width:100%;height:calc(100vh - 264px);min-height:400px;max-height:none;background:#060910;display:block;position:relative;overflow:hidden;contain:strict}
     #rviz-container > div{position:absolute!important;top:0!important;left:0!important;width:100%!important;height:100%!important;margin:0!important;overflow:hidden!important}
@@ -51,7 +51,7 @@
     .mode-btn.active{border-color:var(--accent);color:var(--accent);background:rgba(0,229,255,.08)}
     .mode-btn:hover{border-color:var(--text);color:var(--text)}
     #map-mode-label{font-family:var(--font-mono);font-size:11px;color:var(--warn);margin-left:auto}
-    .right-col{grid-column:2;display:flex;flex-direction:column;gap:16px;overflow-y:auto;max-height:calc(100vh - 130px);padding-bottom:16px;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+    .right-col{grid-column:2;display:flex;flex-direction:column;gap:16px;align-self:start;max-height:calc(100vh - 195px);overflow-y:auto;padding-bottom:4px;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
     .right-col::-webkit-scrollbar{width:4px}
     .right-col::-webkit-scrollbar-track{background:transparent}
     .right-col::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
