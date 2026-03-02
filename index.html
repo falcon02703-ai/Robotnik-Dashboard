@@ -82,6 +82,25 @@
     .status-bar span{display:flex;align-items:center;gap:6px}
     #toast{position:fixed;bottom:60px;right:28px;background:var(--success);color:var(--bg);font-family:var(--font-mono);font-size:12px;padding:10px 18px;border-radius:3px;opacity:0;transform:translateY(10px);transition:all .25s;pointer-events:none;z-index:200}
     #toast.show{opacity:1;transform:translateY(0)}
+
+    /* ── PAGE TABS ── */
+    .page-tabs{display:flex;align-items:center;gap:0;padding:0 28px;background:var(--surface);border-bottom:2px solid var(--border);position:sticky;top:65px;z-index:90}
+    .page-tab{position:relative;font-family:var(--font-ui);font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:10px 20px;color:var(--muted);cursor:pointer;border:none;background:transparent;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;display:flex;align-items:center;gap:8px}
+    .page-tab:hover{color:var(--text)}
+    .page-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+    .page-tab .tab-dot{width:7px;height:7px;border-radius:50%;background:var(--muted);transition:background .2s}
+    .page-tab.active .tab-dot{background:var(--accent);box-shadow:0 0 6px var(--accent)}
+    .tab-cam-badge{font-family:var(--font-mono);font-size:9px;color:var(--bg);background:var(--muted);padding:1px 5px;border-radius:2px;margin-left:4px;transition:background .2s}
+    .page-tab.active .tab-cam-badge{background:var(--accent)}
+
+    /* page visibility */
+    .page{display:none}
+    .page.active{display:block}
+    .camera-page-inner{padding:16px 28px;display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    .camera-page-inner .camera-feed-wrap video{width:100%;height:auto;border:1px solid var(--border);background:#000;display:block;border-radius:2px}
+    .camera-feed-label{font-family:var(--font-mono);font-size:10px;color:var(--muted);padding:6px 0 2px;letter-spacing:1px}
+    .cam-full-panel{background:var(--surface);border:1px solid var(--border);border-radius:4px;overflow:hidden;padding:12px 16px}
+    .cam-full-panel .panel-header{margin:-12px -16px 12px;padding:10px 16px;border-bottom:1px solid var(--border);background:rgba(0,229,255,.04);display:flex;align-items:center;justify-content:space-between}
   </style>
 </head>
 <body>
@@ -100,6 +119,19 @@
   </div>
 </header>
 
+<!-- ── PAGE TAB BAR ── -->
+<div class="page-tabs">
+  <button class="page-tab active" id="tab-nav" onclick="switchTab('nav')">
+    <span class="tab-dot"></span> Navigation
+  </button>
+  <button class="page-tab" id="tab-cam" onclick="switchTab('cam')">
+    <span class="tab-dot"></span> Cameras
+    <span class="tab-cam-badge" id="cam-tab-badge">WebRTC</span>
+  </button>
+</div>
+
+<!-- ══════════════ PAGE: NAVIGATION ══════════════ -->
+<div class="page active" id="page-nav">
 <div class="main-grid">
   <!-- MAP -->
   <div class="panel map-panel">
@@ -183,23 +215,29 @@
       </div>
       <p style="font-family:var(--font-mono);font-size:10px;color:var(--muted);text-align:center;padding-bottom:10px">Arrow keys also supported</p>
     </div>
-  </div>
+  </div><!-- /.right-col -->
 
-  <!-- CAMERA -->
-  <div class="panel camera-panel">
-    <div class="panel-header">
-      <span class="panel-title">Cameras</span>
-      <span class="panel-badge">WebRTC</span>
+</div><!-- /.main-grid -->
+</div><!-- /#page-nav -->
+
+<!-- ══════════════ PAGE: CAMERAS ══════════════ -->
+<div class="page" id="page-cam">
+  <div class="camera-page-inner">
+    <div class="cam-full-panel">
+      <div class="panel-header">
+        <span class="panel-title">Front Camera</span>
+        <span class="panel-badge">WebRTC · mid:2</span>
+      </div>
+      <video id="camera-front" autoplay playsinline muted style="width:100%;border:1px solid var(--border);background:#000;display:block;border-radius:2px"></video>
+      <div class="camera-feed-label">FRONT &nbsp;<span id="camera-front-status" style="color:var(--muted)">CONNECTING...</span></div>
     </div>
-    <div class="camera-inner">
-      <div class="camera-feed-wrap">
-        <video id="camera-front" autoplay playsinline muted></video>
-        <div class="camera-feed-label">FRONT &nbsp;<span id="camera-front-status" style="color:var(--muted)">CONNECTING...</span></div>
+    <div class="cam-full-panel">
+      <div class="panel-header">
+        <span class="panel-title">Top PTZ Camera</span>
+        <span class="panel-badge">WebRTC · mid:1</span>
       </div>
-      <div class="camera-feed-wrap">
-        <video id="camera-top" autoplay playsinline muted></video>
-        <div class="camera-feed-label">TOP PTZ &nbsp;<span id="camera-top-status" style="color:var(--muted)">CONNECTING...</span></div>
-      </div>
+      <video id="camera-top" autoplay playsinline muted style="width:100%;border:1px solid var(--border);background:#000;display:block;border-radius:2px"></video>
+      <div class="camera-feed-label">TOP PTZ &nbsp;<span id="camera-top-status" style="color:var(--muted)">CONNECTING...</span></div>
     </div>
   </div>
 </div>
@@ -489,6 +527,9 @@
             frontVideo.srcObject = new MediaStream([track]);
             frontStatus.textContent = 'LIVE';
             frontStatus.style.color = 'var(--success)';
+            // update tab badge
+            var badge = document.getElementById('cam-tab-badge');
+            badge.textContent = 'LIVE'; badge.style.background = 'var(--success)'; badge.style.color = 'var(--bg)';
           }
           if (tc.mid === '1') {
             topVideo.srcObject = new MediaStream([track]);
@@ -534,6 +575,19 @@
   }
 
   connectCamera();
+
+  // ── TAB SWITCHING ──
+  function switchTab(name) {
+    document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('active'); });
+    document.querySelectorAll('.page-tab').forEach(function(t){ t.classList.remove('active'); });
+    document.getElementById('page-' + name).classList.add('active');
+    document.getElementById('tab-' + name).classList.add('active');
+    // update camera badge live status
+    var fs = document.getElementById('camera-front-status');
+    var badge = document.getElementById('cam-tab-badge');
+    if (fs && fs.textContent === 'LIVE') { badge.textContent = 'LIVE'; badge.style.background = 'var(--success)'; badge.style.color = 'var(--bg)'; }
+    else { badge.textContent = 'WebRTC'; badge.style.background = ''; badge.style.color = ''; }
+  }
 
   // ── CLOCK + TOAST ──
   setInterval(function() { document.getElementById('sb-time').textContent = new Date().toLocaleTimeString(); }, 1000);
