@@ -408,17 +408,17 @@
         document.getElementById('navStatus').textContent = msg.state_description || msg.state || '--';
       });
 
-    // ── DOCKING STATUS ──
+    // ── DOCKING STATUS — used only for badge + undock button visibility ──
     new ROSLIB.Topic({ ros:ros, name:'/robot/charge_manager/docking_status', messageType:'robotnik_msgs/BatteryDockingStatusStamped' })
       .subscribe(function(msg) {
         var docked = msg.status && msg.status.contact_relay_status === true;
         updateDockUI(docked);
       });
 
-    // ── UNCHARGE STATE — watch for completion ──
+    // ── UNCHARGE STATE — true completion: READY after a running procedure ──
+    // state 300 = READY, but only unlock once we were actively undocking
     new ROSLIB.Topic({ ros:ros, name:'/robot/robot_local_control/NavigationComponent/UnchargeComponent/state', messageType:'robotnik_msgs/State' })
       .subscribe(function(msg) {
-        // state 300 = READY, meaning uncharge finished or idle
         if (window._undocking && msg.state === 300) {
           window._undocking = false;
           setTeleopLocked(false);
