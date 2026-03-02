@@ -239,7 +239,7 @@
       <div class="panel-header">
         <span class="panel-title">External Goal Source</span>
         <div style="display:flex;align-items:center;gap:8px">
-          <span class="ext-ws-status" id="ext-ws-header-status">DISCONNECTED</span>
+          <span class="ext-ws-status error" id="ext-ws-header-status">DISCONNECTED</span>
           <span class="panel-badge">WebSocket to goal topic</span>
         </div>
       </div>
@@ -301,7 +301,7 @@
 
 <div class="status-bar">
   <span>ROSBRIDGE <span id="sb-ros" style="color:var(--muted)">DISCONNECTED</span></span>
-  <span>EXT-WS <span id="sb-ext" style="color:var(--muted)">DISCONNECTED</span></span>
+  <span>EXT-WS <span id="sb-ext" style="color:var(--accent2)">DISCONNECTED</span></span>
   <span>MAP <span id="sb-map" style="color:var(--muted)">NO DATA</span></span>
   <span>LAST GOAL <span id="sb-goal" style="color:var(--muted)">--</span></span>
   <span style="margin-left:auto" id="sb-time">--</span>
@@ -359,6 +359,20 @@
     c.style.height = (c.offsetHeight + 1) + 'px';
     requestAnimationFrame(function() { c.style.height = h; });
   }
+
+  // Re-trigger layout when window is resized or tab becomes visible again
+  // (browsers can suspend/throttle layout while tabbed away, causing stale vh values)
+  function onLayoutRefresh() {
+    var c = document.getElementById('rviz-container');
+    c.style.height = '';
+    requestAnimationFrame(function() {
+      forceVncResize();
+    });
+  }
+  window.addEventListener('resize', onLayoutRefresh);
+  document.addEventListener('visibilitychange', function() {
+    if (document.visibilityState === 'visible') onLayoutRefresh();
+  });
   var ros = new ROSLIB.Ros({ url: 'wss://' + ROBOT_IP + '/ws' });
 
   ros.on('connection', function() {
