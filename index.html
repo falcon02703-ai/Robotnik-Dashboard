@@ -409,7 +409,7 @@
       });
 
     // ── DOCKING STATUS ──
-    new ROSLIB.Topic({ ros:ros, name:'/robot/charge_manager/docking_status', messageType:'robotnik_msgs/DockingStatus' })
+    new ROSLIB.Topic({ ros:ros, name:'/robot/charge_manager/docking_status', messageType:'robotnik_msgs/BatteryDockingStatusStamped' })
       .subscribe(function(msg) {
         var docked = msg.status && msg.status.contact_relay_status === true;
         updateDockUI(docked);
