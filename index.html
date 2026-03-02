@@ -424,8 +424,15 @@
     // Odometry
     new ROSLIB.Topic({ ros:ros, name:'/robot/robotnik_base_control/odom', messageType:'nav_msgs/Odometry' })
       .subscribe(function(msg) {
-        document.getElementById('poseLinVel').textContent = msg.twist.twist.linear.x.toFixed(3);
-        document.getElementById('poseAngVel').textContent = msg.twist.twist.angular.z.toFixed(3);
+        var lin = msg.twist.twist.linear.x;
+        var ang = msg.twist.twist.angular.z;
+        document.getElementById('poseLinVel').textContent = lin.toFixed(3);
+        document.getElementById('poseAngVel').textContent = ang.toFixed(3);
+        var moving = Math.abs(lin) > 0.01 || Math.abs(ang) > 0.01;
+        if (moving !== window._isMoving) {
+          window._isMoving = moving;
+          updateNavStatus();
+        }
       });
 
     // Navigation state
@@ -600,20 +607,27 @@
   window._undocking = false;
   window._undockDelay = false;
   window._isDocked = false;
+  window._isMoving = false;
   window._lastNavDesc = '--';
   window._baseHwEmergency = false;
 
   function updateNavStatus(desc) {
     if (desc !== undefined) window._lastNavDesc = desc;
     var el = document.getElementById('navStatus');
-    var upper = String(window._lastNavDesc).toUpperCase();
-    // Hardware e-stop takes absolute priority
+    // E-stop always takes highest priority
     if (window._baseHwEmergency) {
       el.textContent = 'EMERG. STOP';
       el.style.color = 'var(--accent2)';
       return;
     }
-    // Override: if docked and nav stack is just sitting idle, show CHARGING
+    // Active movement
+    if (window._isMoving) {
+      el.textContent = 'NAVIGATING';
+      el.style.color = 'var(--warn)';
+      return;
+    }
+    // Docked and idle = charging
+    var upper = String(window._lastNavDesc).toUpperCase();
     if (window._isDocked && (upper === 'STANDBY' || upper === 'READY')) {
       el.textContent = 'CHARGING';
       el.style.color = 'var(--warn)';
