@@ -422,14 +422,16 @@
       .subscribe(function(msg) {
         if (window._undocking && msg.state === 300) {
           window._undocking = false;
+          window._undockDelay = true;
           setTimeout(function() {
+            window._undockDelay = false;
             setTeleopLocked(false);
             var btn = document.getElementById('undock-btn');
             btn.classList.remove('running');
             btn.disabled = false;
             document.getElementById('undock-btn-label').textContent = 'UNDOCK TO ENABLE TELEOP';
             showToast('Undocked — teleop ready');
-          }, 14000);
+          }, 15000);
         }
       });
   }
@@ -530,6 +532,7 @@
 
   // ── DOCKING UI HELPERS ──
   window._undocking = false;
+  window._undockDelay = false; // true during the post-completion delay period
 
   function updateDockUI(docked) {
     var badge = document.getElementById('dock-badge');
@@ -538,12 +541,12 @@
       badge.textContent = 'DOCKED';
       badge.className = 'dock-status-badge docked';
       undockBar.style.display = 'block';
-      if (!window._undocking) setTeleopLocked(true);
+      if (!window._undocking && !window._undockDelay) setTeleopLocked(true);
     } else {
       badge.textContent = 'UNDOCKED';
       badge.className = 'dock-status-badge undocked';
       undockBar.style.display = 'none';
-      if (!window._undocking) setTeleopLocked(false);
+      if (!window._undocking && !window._undockDelay) setTeleopLocked(false);
     }
   }
 
