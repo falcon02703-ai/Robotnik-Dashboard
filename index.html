@@ -60,6 +60,8 @@
     .pose-label{font-family:var(--font-mono);font-size:10px;color:var(--muted);letter-spacing:1px;margin-bottom:4px}
     .pose-value{font-family:var(--font-mono);font-size:18px;color:var(--accent)}
     .init-pose-form{padding:14px 16px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+    .init-pose-field{display:flex;flex-direction:column;gap:4px}
+    .init-pose-field input{background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:var(--font-mono);font-size:13px;padding:7px 10px;border-radius:2px;width:100%}
     .init-pose-form input{background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:var(--font-mono);font-size:13px;padding:7px 10px;border-radius:2px;width:100%}
     .init-pose-form input:focus{outline:none;border-color:var(--accent)}
     .init-pose-form input::placeholder{color:var(--muted)}
@@ -208,7 +210,7 @@
       </div>
       <div class="teleop-footer">
         <input type="checkbox" id="arrow-key-toggle" onchange="arrowKeysEnabled=this.checked">
-        <label for="arrow-key-toggle">ARROW KEYS</label>
+        <label for="arrow-key-toggle">SUPPORT ARROW KEYS</label>
       </div>
     </div>
 
@@ -219,9 +221,18 @@
         <span class="panel-badge">/robot/initialpose</span>
       </div>
       <div class="init-pose-form">
-        <input id="init-x"   type="number" step="0.01" placeholder="X (m)"     value="0.0">
-        <input id="init-y"   type="number" step="0.01" placeholder="Y (m)"     value="0.0">
-        <input id="init-yaw" type="number" step="0.01" placeholder="Yaw (rad)" value="0.0">
+        <div class="init-pose-field">
+          <div class="pose-label">X (m)</div>
+          <input id="init-x"   type="number" step="0.01" placeholder="0.0" value="0.0">
+        </div>
+        <div class="init-pose-field">
+          <div class="pose-label">Y (m)</div>
+          <input id="init-y"   type="number" step="0.01" placeholder="0.0" value="0.0">
+        </div>
+        <div class="init-pose-field">
+          <div class="pose-label">YAW (rad)</div>
+          <input id="init-yaw" type="number" step="0.01" placeholder="0.0" value="0.0">
+        </div>
         <button class="btn-primary" onclick="publishInitialPose()">PUBLISH INITIAL POSE</button>
       </div>
     </div>
