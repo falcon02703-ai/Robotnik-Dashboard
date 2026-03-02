@@ -75,6 +75,21 @@
     .teleop-footer{display:flex;align-items:center;justify-content:flex-end;padding:0 16px 10px;gap:7px}
     .teleop-footer label{font-family:var(--font-mono);font-size:10px;color:var(--muted);cursor:pointer;letter-spacing:1px;user-select:none}
     .teleop-footer input[type=checkbox]{accent-color:var(--accent);width:12px;height:12px;cursor:pointer}
+    /* docking status indicator */
+    .dock-status-badge{font-family:var(--font-mono);font-size:10px;padding:2px 8px;border-radius:2px;background:rgba(255,255,255,.05);color:var(--muted);transition:all .3s}
+    .dock-status-badge.docked{color:var(--warn);background:rgba(255,214,0,.1)}
+    .dock-status-badge.undocked{color:var(--success);background:rgba(0,255,136,.08)}
+    /* undock button */
+    .undock-bar{padding:10px 16px;border-top:1px solid var(--border)}
+    .btn-undock{width:100%;font-family:var(--font-ui);font-weight:700;font-size:12px;letter-spacing:2px;text-transform:uppercase;padding:9px;background:transparent;border:1px solid var(--warn);color:var(--warn);cursor:pointer;border-radius:2px;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px}
+    .btn-undock:hover:not(:disabled){background:var(--warn);color:var(--bg)}
+    .btn-undock:disabled{opacity:.4;cursor:not-allowed}
+    .btn-undock.running{border-color:var(--accent);color:var(--accent);animation:undock-pulse 1s infinite}
+    @keyframes undock-pulse{0%,100%{opacity:1}50%{opacity:.5}}
+    .undock-spinner{width:11px;height:11px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite;display:none}
+    .btn-undock.running .undock-spinner{display:inline-block}
+    /* teleop buttons disabled state */
+    .teleop-grid.locked .tele-btn{opacity:.25;pointer-events:none}
     .camera-panel{grid-column:1/-1}
     .camera-inner{padding:12px 16px}
     .camera-feed-wrap{flex:1;display:flex;flex-direction:column;min-width:0}
@@ -195,9 +210,12 @@
     <div class="panel">
       <div class="panel-header">
         <span class="panel-title">Teleop</span>
-        <span class="panel-badge">/robot/web_teleop/cmd_vel</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="dock-status-badge" id="dock-badge">DOCK: UNKNOWN</span>
+          <span class="panel-badge">/robot/web_teleop/cmd_vel</span>
+        </div>
       </div>
-      <div class="teleop-grid">
+      <div class="teleop-grid locked" id="teleop-grid">
         <div></div>
         <button class="tele-btn" onmousedown="startMoving(0.4,0)"  onmouseup="stopMoving()" onmouseleave="stopMoving()" ontouchstart="startMoving(0.4,0)"  ontouchend="stopMoving()">&#9650;</button>
         <div></div>
@@ -207,6 +225,12 @@
         <div></div>
         <button class="tele-btn" onmousedown="startMoving(-0.4,0)" onmouseup="stopMoving()" onmouseleave="stopMoving()" ontouchstart="startMoving(-0.4,0)" ontouchend="stopMoving()">&#9660;</button>
         <div></div>
+      </div>
+      <div class="undock-bar" id="undock-bar" style="display:none">
+        <button class="btn-undock" id="undock-btn" onclick="triggerUndock()">
+          <span class="undock-spinner" id="undock-spinner"></span>
+          <span id="undock-btn-label">UNDOCK TO ENABLE TELEOP</span>
+        </button>
       </div>
       <div class="teleop-footer">
         <input type="checkbox" id="arrow-key-toggle" onchange="arrowKeysEnabled=this.checked">
@@ -383,6 +407,28 @@
       .subscribe(function(msg) {
         document.getElementById('navStatus').textContent = msg.state_description || msg.state || '--';
       });
+
+    // ── DOCKING STATUS ──
+    new ROSLIB.Topic({ ros:ros, name:'/robot/charge_manager/docking_status', messageType:'robotnik_msgs/DockingStatus' })
+      .subscribe(function(msg) {
+        var docked = msg.status && msg.status.contact_relay_status === true;
+        updateDockUI(docked);
+      });
+
+    // ── UNCHARGE STATE — watch for completion ──
+    new ROSLIB.Topic({ ros:ros, name:'/robot/robot_local_control/NavigationComponent/UnchargeComponent/state', messageType:'robotnik_msgs/State' })
+      .subscribe(function(msg) {
+        // state 300 = READY, meaning uncharge finished or idle
+        if (window._undocking && msg.state === 300) {
+          window._undocking = false;
+          setTeleopLocked(false);
+          var btn = document.getElementById('undock-btn');
+          btn.classList.remove('running');
+          btn.disabled = false;
+          document.getElementById('undock-btn-label').textContent = 'UNDOCK TO ENABLE TELEOP';
+          showToast('Undocked — teleop ready');
+        }
+      });
   }
 
   function yawToQuaternion(yaw) {
@@ -477,6 +523,59 @@
       document.getElementById('sb-ext').style.color = 'var(--muted)';
       logExt('Disconnected');
     };
+  }
+
+  // ── DOCKING UI HELPERS ──
+  window._undocking = false;
+
+  function updateDockUI(docked) {
+    var badge = document.getElementById('dock-badge');
+    var undockBar = document.getElementById('undock-bar');
+    if (docked) {
+      badge.textContent = 'DOCKED';
+      badge.className = 'dock-status-badge docked';
+      undockBar.style.display = 'block';
+      if (!window._undocking) setTeleopLocked(true);
+    } else {
+      badge.textContent = 'UNDOCKED';
+      badge.className = 'dock-status-badge undocked';
+      undockBar.style.display = 'none';
+      if (!window._undocking) setTeleopLocked(false);
+    }
+  }
+
+  function setTeleopLocked(locked) {
+    var grid = document.getElementById('teleop-grid');
+    if (locked) grid.classList.add('locked');
+    else grid.classList.remove('locked');
+  }
+
+  function triggerUndock() {
+    if (!ros || !ros.isConnected) { showToast('Not connected to ROS'); return; }
+    var btn = document.getElementById('undock-btn');
+    btn.classList.add('running');
+    btn.disabled = true;
+    document.getElementById('undock-btn-label').textContent = 'UNDOCKING...';
+    window._undocking = true;
+    var svc = new ROSLIB.Service({
+      ros: ros,
+      name: '/robot/robot_local_control/NavigationComponent/UnchargeComponent/add',
+      serviceType: 'robot_local_control_msgs/UnchargePetition'
+    });
+    var req = new ROSLIB.ServiceRequest({
+      procedure: { charge_station: '' }
+    });
+    svc.callService(req, function(result) {
+      console.log('[Undock] service response:', JSON.stringify(result));
+      // UI will unlock once UnchargeComponent/state returns to 300 (READY)
+    }, function(err) {
+      console.error('[Undock] service error:', err);
+      window._undocking = false;
+      btn.classList.remove('running');
+      btn.disabled = false;
+      document.getElementById('undock-btn-label').textContent = 'UNDOCK TO ENABLE TELEOP';
+      showToast('Undock failed: ' + err);
+    });
   }
 
   // ── TELEOP ──
