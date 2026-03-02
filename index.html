@@ -599,6 +599,7 @@
   var keysDown = {};
   document.addEventListener('keydown', function(e) {
     if (!arrowKeysEnabled) return;
+    if (document.getElementById('teleop-grid').classList.contains('locked')) return;
     if (keysDown[e.key]) return; keysDown[e.key] = true;
     if      (e.key==='ArrowUp')    startMoving(0.4,0);
     else if (e.key==='ArrowDown')  startMoving(-0.4,0);
