@@ -407,10 +407,12 @@
       .subscribe(function(msg) {
         var desc = msg.state_description || msg.state || '--';
         var el = document.getElementById('navStatus');
-        el.textContent = desc;
         var upper = String(desc).toUpperCase();
+        el.textContent = upper === 'EMERGENCY' ? 'EMERG. STOP' : desc;
         if (upper === 'READY' || upper === 'STANDBY') {
           el.style.color = 'var(--success)';
+        } else if (upper === 'EMERGENCY' || upper === 'FAILURE') {
+          el.style.color = 'var(--accent2)';
         } else {
           el.style.color = 'var(--warn)';
         }
