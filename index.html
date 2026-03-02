@@ -193,19 +193,6 @@
       </div>
     </div>
 
-    <!-- TASK 2: EXTERNAL WS -->
-    <div class="panel">
-      <div class="panel-header">
-        <span class="panel-title">External Goal Source</span>
-        <span class="panel-badge">WebSocket to goal topic</span>
-      </div>
-      <div class="ext-ws-form">
-        <input id="ext-ws-url" type="text" placeholder="ws://host:port" value="wss://nhb-raas-staging.senserbot.com/security-robot-server/dashboard">
-        <button class="btn-secondary" id="ext-ws-btn" onclick="toggleExternalWS()">CONNECT</button>
-      </div>
-      <div id="ext-ws-log">Awaiting external WebSocket connection...</div>
-    </div>
-
     <!-- TELEOP -->
     <div class="panel">
       <div class="panel-header">
@@ -236,6 +223,19 @@
         <input type="checkbox" id="arrow-key-toggle" onchange="arrowKeysEnabled=this.checked">
         <label for="arrow-key-toggle">SUPPORT ARROW KEYS</label>
       </div>
+    </div>
+
+    <!-- TASK 2: EXTERNAL WS -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">External Goal Source</span>
+        <span class="panel-badge">WebSocket to goal topic</span>
+      </div>
+      <div class="ext-ws-form">
+        <input id="ext-ws-url" type="text" placeholder="ws://host:port" value="wss://nhb-raas-staging.senserbot.com/security-robot-server/dashboard">
+        <button class="btn-secondary" id="ext-ws-btn" onclick="toggleExternalWS()">CONNECT</button>
+      </div>
+      <div id="ext-ws-log">Awaiting external WebSocket connection...</div>
     </div>
 
     <!-- TASK 3: INITIAL POSE -->
