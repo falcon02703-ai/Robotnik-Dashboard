@@ -51,6 +51,10 @@
     .mode-btn.active{border-color:var(--accent);color:var(--accent);background:rgba(0,229,255,.08)}
     .mode-btn:hover{border-color:var(--text);color:var(--text)}
     #map-mode-label{font-family:var(--font-mono);font-size:11px;color:var(--warn);margin-left:auto}
+    .btn-nav-cancel{font-family:var(--font-ui);font-weight:700;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;padding:5px 12px;background:transparent;border:1px solid var(--accent2);color:var(--accent2);cursor:pointer;border-radius:2px;transition:all .15s;white-space:nowrap}
+    .btn-nav-cancel:hover{background:var(--accent2);color:var(--bg)}
+    .btn-nav-cancel.cancelled{border-color:var(--success);color:var(--success)}
+    .btn-nav-cancel:disabled{opacity:.4;cursor:not-allowed}
     .right-col{grid-column:2;display:flex;flex-direction:column;gap:16px;align-self:start;max-height:calc(100vh - 195px);overflow-y:auto;padding-bottom:4px;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
     .right-col::-webkit-scrollbar{width:4px}
     .right-col::-webkit-scrollbar-track{background:transparent}
@@ -170,7 +174,10 @@
   <div class="panel map-panel">
     <div class="panel-header">
       <span class="panel-title">Map &amp; Navigation</span>
-      <span class="panel-badge">noVNC → wss:/rviz_web → rviz-vnc:5910</span>
+      <div style="display:flex;align-items:center;gap:8px">
+        <button class="btn-nav-cancel" id="nav-cancel-btn" onclick="stopAll()">⊘ STOP ALL</button>
+        <span class="panel-badge">noVNC → wss:/rviz_web → rviz-vnc:5910</span>
+      </div>
     </div>
     <div id="rviz-container">
       <div id="vnc-overlay">
@@ -603,6 +610,59 @@
     };
   }
 
+  // ── STOP ALL ──
+  window._undockProcedureId = null;
+
+  function stopAll() {
+    if (!ros || !ros.isConnected) { showToast('Not connected to ROS'); return; }
+    var btn = document.getElementById('nav-cancel-btn');
+    btn.disabled = true;
+
+    // Zero velocity immediately
+    if (cmdVelTopic) cmdVelTopic.publish(new ROSLIB.Message({ linear:{x:0,y:0,z:0}, angular:{x:0,y:0,z:0} }));
+
+    // Cancel all navigation components with id:0 (matches any running procedure on GoToMBF/Move)
+    var genericReq = new ROSLIB.ServiceRequest({
+      header: { id: 0, priority: 0, stamp: { secs: 0, nsecs: 0 }, name: 'cancel' }
+    });
+
+    var calls = 0, total = 3;
+    function onDone() {
+      calls++;
+      if (calls >= total) {
+        btn.disabled = false;
+        btn.classList.add('cancelled');
+        btn.textContent = '✓ STOPPED';
+        setTimeout(function() {
+          btn.classList.remove('cancelled');
+          btn.textContent = '⊘ STOP ALL';
+        }, 2000);
+        showToast('All navigation stopped');
+      }
+    }
+
+    new ROSLIB.Service({ ros:ros, name:'/robot/robot_local_control/NavigationComponent/GoToMBFComponent/cancel', serviceType:'procedures_msgs/ProcedureQuery' })
+      .callService(genericReq, onDone, function(e) { console.warn('[StopAll GoToMBF]', e); onDone(); });
+
+    new ROSLIB.Service({ ros:ros, name:'/robot/robot_local_control/NavigationComponent/MoveComponent/cancel', serviceType:'procedures_msgs/ProcedureQuery' })
+      .callService(genericReq, onDone, function(e) { console.warn('[StopAll Move]', e); onDone(); });
+
+    // UnchargeComponent requires the specific procedure ID assigned at add time
+    if (window._undockProcedureId !== null) {
+      var undockReq = new ROSLIB.ServiceRequest({
+        header: { id: window._undockProcedureId, priority: 0, stamp: { secs: 0, nsecs: 0 }, name: 'cancel' }
+      });
+      new ROSLIB.Service({ ros:ros, name:'/robot/robot_local_control/NavigationComponent/UnchargeComponent/cancel', serviceType:'procedures_msgs/ProcedureQuery' })
+        .callService(undockReq, function() {
+          window._undockProcedureId = null;
+          onDone();
+        }, function(e) { console.warn('[StopAll Uncharge]', e); onDone(); });
+    } else {
+      // No undock in progress, still count it as done
+      onDone();
+    }
+  }
+
   // ── DOCKING UI HELPERS ──
   window._undocking = false;
   window._undockDelay = false;
@@ -682,7 +742,11 @@
     });
     svc.callService(req, function(result) {
       console.log('[Undock] service response:', JSON.stringify(result));
-      // UI will unlock once UnchargeComponent/state returns to 300 (READY)
+      // Store the assigned procedure ID so we can cancel it if needed
+      if (result && result.state && result.state.header) {
+        window._undockProcedureId = result.state.header.id;
+        console.log('[Undock] procedure ID:', window._undockProcedureId);
+      }
     }, function(err) {
       console.error('[Undock] service error:', err);
       window._undocking = false;
