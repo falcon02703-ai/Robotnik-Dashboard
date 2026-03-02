@@ -81,13 +81,22 @@
     .dock-status-badge.undocked{color:var(--success);background:rgba(0,255,136,.08)}
     /* undock button */
     .undock-bar{padding:10px 16px;border-top:1px solid var(--border)}
-    .btn-undock{width:100%;font-family:var(--font-ui);font-weight:700;font-size:12px;letter-spacing:2px;text-transform:uppercase;padding:9px;background:transparent;border:1px solid var(--warn);color:var(--warn);cursor:pointer;border-radius:2px;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px}
-    .btn-undock:hover:not(:disabled){background:var(--warn);color:var(--bg)}
+    .btn-undock{width:100%;font-family:var(--font-ui);font-weight:700;font-size:12px;letter-spacing:2px;text-transform:uppercase;padding:9px;background:transparent;border:1px solid var(--success);color:var(--success);cursor:pointer;border-radius:2px;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px}
+    .btn-undock:hover:not(:disabled){background:var(--success);color:var(--bg)}
     .btn-undock:disabled{opacity:.4;cursor:not-allowed}
     .btn-undock.running{border-color:var(--accent);color:var(--accent);animation:undock-pulse 1s infinite}
     @keyframes undock-pulse{0%,100%{opacity:1}50%{opacity:.5}}
     .undock-spinner{width:11px;height:11px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite;display:none}
     .btn-undock.running .undock-spinner{display:inline-block}
+    /* ext WS connect = green, disconnect = red */
+    .btn-connect{font-family:var(--font-ui);font-weight:700;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;padding:8px 14px;background:transparent;border:1px solid var(--success);color:var(--success);cursor:pointer;border-radius:2px;transition:all .15s;white-space:nowrap}
+    .btn-connect:hover{background:var(--success);color:var(--bg)}
+    .btn-disconnect{font-family:var(--font-ui);font-weight:700;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;padding:8px 14px;background:transparent;border:1px solid var(--accent2);color:var(--accent2);cursor:pointer;border-radius:2px;transition:all .15s;white-space:nowrap}
+    .btn-disconnect:hover{background:var(--accent2);color:var(--bg)}
+    /* ext WS prominent status badge in panel header */
+    .ext-ws-status{font-family:var(--font-mono);font-size:10px;padding:2px 8px;border-radius:2px;background:rgba(255,255,255,.05);color:var(--muted);transition:all .3s;letter-spacing:1px}
+    .ext-ws-status.connected{color:var(--success);background:rgba(0,255,136,.1);animation:pulse 2s infinite}
+    .ext-ws-status.error{color:var(--accent2);background:rgba(255,107,53,.1)}
     /* teleop buttons disabled state */
     .teleop-grid.locked .tele-btn{opacity:.25;pointer-events:none}
     .camera-panel{grid-column:1/-1}
@@ -229,11 +238,14 @@
     <div class="panel">
       <div class="panel-header">
         <span class="panel-title">External Goal Source</span>
-        <span class="panel-badge">WebSocket to goal topic</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="ext-ws-status" id="ext-ws-header-status">DISCONNECTED</span>
+          <span class="panel-badge">WebSocket to goal topic</span>
+        </div>
       </div>
       <div class="ext-ws-form">
         <input id="ext-ws-url" type="text" placeholder="ws://host:port" value="wss://nhb-raas-staging.senserbot.com/security-robot-server/dashboard">
-        <button class="btn-secondary" id="ext-ws-btn" onclick="toggleExternalWS()">CONNECT</button>
+        <button class="btn-connect" id="ext-ws-btn" onclick="toggleExternalWS()">CONNECT</button>
       </div>
       <div id="ext-ws-log">Awaiting external WebSocket connection...</div>
     </div>
@@ -366,7 +378,7 @@
     document.getElementById('conn-dot').className = '';
     document.getElementById('conn-text').textContent = 'DISCONNECTED';
     document.getElementById('sb-ros').textContent = 'DISCONNECTED';
-    document.getElementById('sb-ros').style.color = 'var(--muted)';
+    document.getElementById('sb-ros').style.color = 'var(--accent2)';
   });
 
   // ── TOPICS ──
@@ -525,9 +537,13 @@
     var url = document.getElementById('ext-ws-url').value.trim();
     try { extWS = new WebSocket(url); } catch(e) { logExt('ERROR: ' + e.message); return; }
     extWS.onopen = function() {
-      document.getElementById('ext-ws-btn').textContent = 'DISCONNECT';
+      var btn = document.getElementById('ext-ws-btn');
+      btn.textContent = 'DISCONNECT';
+      btn.className = 'btn-disconnect';
       document.getElementById('sb-ext').textContent = 'CONNECTED';
       document.getElementById('sb-ext').style.color = 'var(--success)';
+      var badge = document.getElementById('ext-ws-header-status');
+      badge.textContent = 'CONNECTED'; badge.className = 'ext-ws-status connected';
       logExt('Connected to ' + url);
     };
     extWS.onmessage = function(event) {
@@ -548,11 +564,20 @@
         } else { logExt('Unknown format: ' + event.data); }
       } catch(e) { logExt('Parse error: ' + e.message); }
     };
-    extWS.onerror = function() { logExt('Error'); document.getElementById('sb-ext').style.color='var(--accent2)'; };
+    extWS.onerror = function() {
+      logExt('Error');
+      document.getElementById('sb-ext').style.color = 'var(--accent2)';
+      var badge = document.getElementById('ext-ws-header-status');
+      badge.textContent = 'ERROR'; badge.className = 'ext-ws-status error';
+    };
     extWS.onclose = function() {
-      document.getElementById('ext-ws-btn').textContent = 'CONNECT';
+      var btn = document.getElementById('ext-ws-btn');
+      btn.textContent = 'CONNECT';
+      btn.className = 'btn-connect';
       document.getElementById('sb-ext').textContent = 'DISCONNECTED';
-      document.getElementById('sb-ext').style.color = 'var(--muted)';
+      document.getElementById('sb-ext').style.color = 'var(--accent2)';
+      var badge = document.getElementById('ext-ws-header-status');
+      badge.textContent = 'DISCONNECTED'; badge.className = 'ext-ws-status';
       logExt('Disconnected');
     };
   }
