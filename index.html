@@ -138,6 +138,32 @@
     .camera-feed-label{font-family:var(--font-mono);font-size:10px;color:var(--muted);padding:6px 0 2px;letter-spacing:1px}
     .cam-full-panel{background:var(--surface);border:1px solid var(--border);border-radius:4px;overflow:hidden;padding:12px 16px}
     .cam-full-panel .panel-header{margin:-12px -16px 12px;padding:10px 16px;border-bottom:1px solid var(--border);background:rgba(0,229,255,.04);display:flex;align-items:center;justify-content:space-between}
+
+    /* ── DETECTION PAGE ── */
+    .detection-page-inner{padding:16px 28px;display:grid;grid-template-columns:1fr 340px;gap:16px;align-items:start}
+    .detection-feed-panel{background:var(--surface);border:1px solid var(--border);border-radius:4px}
+    .detection-feed-panel .panel-header{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--border);background:rgba(0,229,255,.04);border-radius:4px 4px 0 0}
+    .detection-img-wrap{padding:12px 16px;display:flex;flex-direction:column;gap:8px}
+    #detection-img{width:100%;display:block;border:1px solid var(--border);background:#000;border-radius:2px;min-height:300px;object-fit:contain}
+    .detection-placeholder{width:100%;min-height:300px;background:#060910;border:1px solid var(--border);border-radius:2px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--muted);font-family:var(--font-mono);font-size:11px;letter-spacing:1px}
+    .detection-placeholder-icon{font-size:36px;opacity:.3}
+    .detection-status-row{display:flex;align-items:center;justify-content:space-between;font-family:var(--font-mono);font-size:10px;color:var(--muted);padding:2px 0}
+    /* right sidebar */
+    .detection-sidebar{display:flex;flex-direction:column;gap:16px}
+    .det-topic-form{padding:12px 16px;display:flex;flex-direction:column;gap:8px}
+    .det-topic-form input{background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:var(--font-mono);font-size:12px;padding:7px 10px;border-radius:2px;width:100%}
+    .det-topic-form input:focus{outline:none;border-color:var(--accent)}
+    .det-topic-form label{font-family:var(--font-mono);font-size:10px;color:var(--muted);letter-spacing:1px}
+    /* test panel */
+    .test-panel-body{padding:12px 16px;display:flex;flex-direction:column;gap:10px}
+    .test-panel-body p{font-family:var(--font-mono);font-size:10px;color:var(--muted);line-height:1.6;letter-spacing:.5px}
+    .file-drop-zone{border:1px dashed var(--border);border-radius:2px;padding:16px;text-align:center;font-family:var(--font-mono);font-size:10px;color:var(--muted);cursor:pointer;transition:all .15s;background:var(--bg)}
+    .file-drop-zone:hover{border-color:var(--accent);color:var(--accent)}
+    .file-drop-zone input{display:none}
+    .det-fps{font-family:var(--font-mono);font-size:10px;color:var(--muted);letter-spacing:1px}
+    .det-badge{font-family:var(--font-mono);font-size:10px;padding:2px 8px;border-radius:2px;background:rgba(255,255,255,.05);color:var(--muted);transition:all .3s}
+    .det-badge.live{color:var(--success);background:rgba(0,255,136,.08);animation:pulse 2s infinite}
+    .det-badge.error{color:var(--accent2);background:rgba(255,107,53,.1)}
   </style>
 </head>
 <body>
@@ -164,6 +190,10 @@
   <button class="page-tab" id="tab-cam" onclick="switchTab('cam')">
     <span class="tab-dot"></span> Cameras
     <span class="tab-cam-badge" id="cam-tab-badge">WebRTC</span>
+  </button>
+  <button class="page-tab" id="tab-det" onclick="switchTab('det')">
+    <span class="tab-dot"></span> Detections
+    <span class="tab-cam-badge" id="det-tab-badge">ROS</span>
   </button>
 </div>
 
@@ -306,7 +336,77 @@
   </div>
 </div>
 
-<div class="status-bar">
+<!-- ══════════════ PAGE: DETECTIONS ══════════════ -->
+<div class="page" id="page-det">
+  <div class="detection-page-inner">
+
+    <!-- MAIN FEED -->
+    <div class="detection-feed-panel">
+      <div class="panel-header">
+        <span class="panel-title">Detected Image Feed</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="det-fps" id="det-fps">-- fps</span>
+          <span class="det-badge" id="det-badge">NO FEED</span>
+          <span class="panel-badge">sensor_msgs/CompressedImage</span>
+        </div>
+      </div>
+      <div class="detection-img-wrap">
+        <!-- Placeholder shown until first image arrives -->
+        <div class="detection-placeholder" id="det-placeholder">
+          <span class="detection-placeholder-icon">🔍</span>
+          <span>AWAITING DETECTION FEED</span>
+          <span style="color:var(--border);font-size:10px" id="det-topic-display">/robot/detections/image_annotated</span>
+        </div>
+        <!-- Image shown once feed is live (hidden initially) -->
+        <img id="detection-img" alt="Detection feed" style="display:none">
+        <div class="detection-status-row">
+          <span id="det-last-msg" style="font-family:var(--font-mono);font-size:10px;color:var(--muted)">Last message: --</span>
+          <span id="det-msg-count" style="font-family:var(--font-mono);font-size:10px;color:var(--muted)">Frames: 0</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- SIDEBAR -->
+    <div class="detection-sidebar">
+
+      <!-- TOPIC CONFIG -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Topic Config</span>
+          <span class="panel-badge">ROSBridge</span>
+        </div>
+        <div class="det-topic-form">
+          <label>IMAGE TOPIC</label>
+          <input id="det-topic-input" type="text" value="/robot/detections/image_annotated" placeholder="/robot/detections/image_annotated">
+          <button class="btn-primary" style="margin-top:4px" onclick="resubscribeDetection()">APPLY TOPIC</button>
+          <p style="font-family:var(--font-mono);font-size:10px;color:var(--muted);line-height:1.6;margin-top:4px">
+            Change this to match the topic published by the AI detection script. Supports sensor_msgs/CompressedImage.
+          </p>
+        </div>
+      </div>
+
+      <!-- TEST PANEL -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Feed Test</span>
+          <span class="panel-badge">Pre-AI testing</span>
+        </div>
+        <div class="test-panel-body">
+          <p>Publish a local image to the detection topic to verify the pipeline before the AI script is available.</p>
+          <div class="file-drop-zone" onclick="document.getElementById('test-img-input').click()">
+            <input type="file" id="test-img-input" accept="image/jpeg,image/png" onchange="publishTestImage(this)">
+            <span id="test-img-label">📁 CLICK TO SELECT IMAGE</span>
+          </div>
+          <button class="btn-secondary" id="test-loop-btn" onclick="toggleTestLoop()" style="width:100%;margin-top:4px" disabled>
+            LOOP TEST IMAGE
+          </button>
+          <p id="test-status" style="font-family:var(--font-mono);font-size:10px;color:var(--muted);text-align:center"></p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
   <span>ROSBRIDGE <span id="sb-ros" style="color:var(--muted)">DISCONNECTED</span></span>
   <span>EXT-WS <span id="sb-ext" style="color:var(--accent2)">DISCONNECTED</span></span>
   <span>MAP <span id="sb-map" style="color:var(--muted)">NO DATA</span></span>
@@ -471,6 +571,9 @@
         window._baseHwEmergency = msg.data === true;
         updateNavStatus();
       });
+
+    // ── DETECTION IMAGE FEED ──
+    initDetectionSubscriber(DETECTION_TOPIC);
 
     // ── DOCKING STATUS — used for badge, undock button, and nav status override ──
     new ROSLIB.Topic({ ros:ros, name:'/robot/charge_manager/docking_status', messageType:'robotnik_msgs/BatteryDockingStatusStamped' })
@@ -885,11 +988,159 @@
     document.querySelectorAll('.page-tab').forEach(function(t){ t.classList.remove('active'); });
     document.getElementById('page-' + name).classList.add('active');
     document.getElementById('tab-' + name).classList.add('active');
-    // update camera badge live status
+    // update camera badge
     var fs = document.getElementById('camera-front-status');
     var badge = document.getElementById('cam-tab-badge');
     if (fs && fs.textContent === 'LIVE') { badge.textContent = 'LIVE'; badge.style.background = 'var(--success)'; badge.style.color = 'var(--bg)'; }
     else { badge.textContent = 'WebRTC'; badge.style.background = ''; badge.style.color = ''; }
+    // update detection badge
+    var detBadge = document.getElementById('det-tab-badge');
+    var detStatus = document.getElementById('det-badge');
+    if (detStatus && detStatus.textContent === 'LIVE') { detBadge.textContent = 'LIVE'; detBadge.style.background = 'var(--success)'; detBadge.style.color = 'var(--bg)'; }
+    else { detBadge.textContent = 'ROS'; detBadge.style.background = ''; detBadge.style.color = ''; }
+  }
+
+  // ── DETECTION IMAGE FEED ──
+  var _detSub = null;
+  var _detFrameCount = 0;
+  var _detLastFrameTime = null;
+  var _detFpsFrames = 0;
+  var _detFpsTimer = null;
+  var _testLoopTimer = null;
+  var _testImageData = null;
+
+  var DETECTION_TOPIC = '/robot/detections/image_annotated';
+
+  function initDetectionSubscriber(topic) {
+    // Unsubscribe from previous topic if any
+    if (_detSub) { try { _detSub.unsubscribe(); } catch(e) {} _detSub = null; }
+    clearInterval(_detFpsTimer);
+
+    DETECTION_TOPIC = topic || DETECTION_TOPIC;
+    document.getElementById('det-topic-display').textContent = DETECTION_TOPIC;
+
+    if (!ros || !ros.isConnected) return;
+
+    _detSub = new ROSLIB.Topic({
+      ros: ros,
+      name: DETECTION_TOPIC,
+      messageType: 'sensor_msgs/CompressedImage',
+      throttle_rate: 0,    // no throttling — show every frame
+      queue_length: 1      // only keep latest frame
+    });
+
+    _detSub.subscribe(function(msg) {
+      // msg.data is base64-encoded image bytes
+      var img = document.getElementById('detection-img');
+      var placeholder = document.getElementById('det-placeholder');
+      var format = (msg.format || 'jpeg').replace('jpeg', 'jpeg').replace('png', 'png');
+
+      img.src = 'data:image/' + format + ';base64,' + msg.data;
+
+      if (placeholder.style.display !== 'none') {
+        placeholder.style.display = 'none';
+        img.style.display = 'block';
+      }
+
+      // Update status
+      _detFrameCount++;
+      _detLastFrameTime = new Date();
+      _detFpsFrames++;
+      document.getElementById('det-msg-count').textContent = 'Frames: ' + _detFrameCount;
+      document.getElementById('det-last-msg').textContent = 'Last: ' + _detLastFrameTime.toLocaleTimeString();
+
+      // Badge
+      var badge = document.getElementById('det-badge');
+      badge.textContent = 'LIVE';
+      badge.className = 'det-badge live';
+      document.getElementById('det-tab-badge').textContent = 'LIVE';
+      document.getElementById('det-tab-badge').style.background = 'var(--success)';
+      document.getElementById('det-tab-badge').style.color = 'var(--bg)';
+    });
+
+    // FPS counter — calculated over 2-second windows
+    _detFpsTimer = setInterval(function() {
+      document.getElementById('det-fps').textContent = (_detFpsFrames / 2).toFixed(1) + ' fps';
+      _detFpsFrames = 0;
+      // If no frames in last 3 seconds, mark as stale
+      if (_detLastFrameTime && (new Date() - _detLastFrameTime) > 3000) {
+        var badge = document.getElementById('det-badge');
+        badge.textContent = 'STALE';
+        badge.className = 'det-badge error';
+      }
+    }, 2000);
+  }
+
+  function resubscribeDetection() {
+    var topic = document.getElementById('det-topic-input').value.trim();
+    if (!topic) { showToast('Enter a topic name'); return; }
+    // Reset display
+    _detFrameCount = 0;
+    _detLastFrameTime = null;
+    document.getElementById('detection-img').style.display = 'none';
+    document.getElementById('det-placeholder').style.display = 'flex';
+    document.getElementById('det-topic-display').textContent = topic;
+    document.getElementById('det-badge').textContent = 'NO FEED';
+    document.getElementById('det-badge').className = 'det-badge';
+    document.getElementById('det-fps').textContent = '-- fps';
+    document.getElementById('det-msg-count').textContent = 'Frames: 0';
+    document.getElementById('det-last-msg').textContent = 'Last message: --';
+    initDetectionSubscriber(topic);
+    showToast('Subscribed to ' + topic);
+  }
+
+  // ── TEST PUBLISHER ──
+  function publishTestImage(input) {
+    var file = input.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      // Strip data URL prefix to get raw base64
+      var b64 = e.target.result.split(',')[1];
+      var format = file.type === 'image/png' ? 'png' : 'jpeg';
+      _testImageData = { b64: b64, format: format };
+      document.getElementById('test-img-label').textContent = '✓ ' + file.name;
+      document.getElementById('test-loop-btn').disabled = false;
+      document.getElementById('test-status').textContent = '';
+      // Publish once immediately
+      publishTestFrame();
+      showToast('Test image loaded — published once');
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function publishTestFrame() {
+    if (!_testImageData || !ros || !ros.isConnected) return;
+    var topic = new ROSLIB.Topic({
+      ros: ros,
+      name: document.getElementById('det-topic-input').value.trim() || DETECTION_TOPIC,
+      messageType: 'sensor_msgs/CompressedImage'
+    });
+    topic.publish(new ROSLIB.Message({
+      header: { seq: 0, stamp: { secs: 0, nsecs: 0 }, frame_id: 'camera' },
+      format: _testImageData.format,
+      data: _testImageData.b64
+    }));
+  }
+
+  function toggleTestLoop() {
+    var btn = document.getElementById('test-loop-btn');
+    var status = document.getElementById('test-status');
+    if (_testLoopTimer) {
+      clearInterval(_testLoopTimer);
+      _testLoopTimer = null;
+      btn.textContent = 'LOOP TEST IMAGE';
+      btn.style.borderColor = '';
+      btn.style.color = '';
+      status.textContent = '';
+    } else {
+      if (!_testImageData) { showToast('Load an image first'); return; }
+      _testLoopTimer = setInterval(publishTestFrame, 200); // ~5fps loop
+      btn.textContent = 'STOP LOOP';
+      btn.style.borderColor = 'var(--accent2)';
+      btn.style.color = 'var(--accent2)';
+      status.textContent = 'Publishing at ~5 fps...';
+    }
   }
 
   // ── CLOCK + TOAST ──
