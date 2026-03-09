@@ -189,11 +189,11 @@
   </button>
   <button class="page-tab" id="tab-cam" onclick="switchTab('cam')">
     <span class="tab-dot"></span> Cameras
-    <span class="tab-cam-badge" id="cam-tab-badge">WebRTC</span>
+    <span class="tab-cam-badge" id="cam-tab-badge"></span>
   </button>
   <button class="page-tab" id="tab-det" onclick="switchTab('det')">
     <span class="tab-dot"></span> Detections
-    <span class="tab-cam-badge" id="det-tab-badge">ROS</span>
+    <span class="tab-cam-badge" id="det-tab-badge"></span>
   </button>
 </div>
 
@@ -989,12 +989,12 @@
     var fs = document.getElementById('camera-front-status');
     var badge = document.getElementById('cam-tab-badge');
     if (fs && fs.textContent === 'LIVE') { badge.textContent = 'LIVE'; badge.style.background = 'var(--success)'; badge.style.color = 'var(--bg)'; }
-    else { badge.textContent = 'WebRTC'; badge.style.background = ''; badge.style.color = ''; }
+    else { badge.textContent = ''; badge.style.background = ''; badge.style.color = ''; }
     // update detection badge
     var detBadge = document.getElementById('det-tab-badge');
     var detStatus = document.getElementById('det-badge');
     if (detStatus && detStatus.textContent === 'LIVE') { detBadge.textContent = 'LIVE'; detBadge.style.background = 'var(--success)'; detBadge.style.color = 'var(--bg)'; }
-    else { detBadge.textContent = 'ROS'; detBadge.style.background = ''; detBadge.style.color = ''; }
+    else { detBadge.textContent = ''; detBadge.style.background = ''; detBadge.style.color = ''; }
   }
 
   // ── DETECTION IMAGE FEED ──
