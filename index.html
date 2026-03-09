@@ -164,6 +164,30 @@
     .det-badge{font-family:var(--font-mono);font-size:10px;padding:2px 8px;border-radius:2px;background:rgba(255,255,255,.05);color:var(--muted);transition:all .3s}
     .det-badge.live{color:var(--success);background:rgba(0,255,136,.08);animation:pulse 2s infinite}
     .det-badge.error{color:var(--accent2);background:rgba(255,107,53,.1)}
+    /* ── DETECTION ALERT INDICATOR ── */
+    .det-alert-panel-body{padding:14px 16px;display:flex;flex-direction:column;gap:12px}
+    .det-alert-indicator{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:18px 12px;border-radius:3px;border:1px solid var(--border);background:rgba(0,255,136,.06);transition:all .35s;cursor:default;min-height:90px}
+    .det-alert-indicator.clear{border-color:rgba(0,255,136,.35);background:rgba(0,255,136,.06)}
+    .det-alert-indicator.detected{border-color:rgba(255,107,53,.6);background:rgba(255,107,53,.1);animation:det-alert-pulse 1s infinite}
+    .det-alert-indicator.no-topic{border-color:var(--border);background:rgba(255,255,255,.02)}
+    @keyframes det-alert-pulse{0%,100%{box-shadow:0 0 0 0 rgba(255,107,53,.5)}50%{box-shadow:0 0 14px 4px rgba(255,107,53,.15)}}
+    .det-alert-dot{width:20px;height:20px;border-radius:50%;background:var(--muted);transition:background .3s,box-shadow .3s;flex-shrink:0}
+    .det-alert-indicator.clear   .det-alert-dot{background:var(--success);box-shadow:0 0 8px rgba(0,255,136,.6)}
+    .det-alert-indicator.detected .det-alert-dot{background:var(--accent2);box-shadow:0 0 10px rgba(255,107,53,.8);animation:det-dot-throb .8s infinite}
+    @keyframes det-dot-throb{0%,100%{transform:scale(1)}50%{transform:scale(1.25)}}
+    .det-alert-state{font-family:var(--font-mono);font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);transition:color .3s;text-align:center}
+    .det-alert-indicator.clear    .det-alert-state{color:var(--success)}
+    .det-alert-indicator.detected .det-alert-state{color:var(--accent2)}
+    .det-alert-label{font-family:var(--font-mono);font-size:11px;color:var(--muted);letter-spacing:1px;text-align:center;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;transition:color .3s;min-height:14px}
+    .det-alert-indicator.detected .det-alert-label{color:var(--warn)}
+    .det-alert-meta{display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:10px;color:var(--muted);letter-spacing:.5px}
+    .det-alert-topic-form{display:flex;flex-direction:column;gap:6px}
+    .det-alert-topic-form label{font-family:var(--font-mono);font-size:10px;color:var(--muted);letter-spacing:1px}
+    .det-alert-topic-form input{background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:var(--font-mono);font-size:12px;padding:6px 10px;border-radius:2px;width:100%}
+    .det-alert-topic-form input:focus{outline:none;border-color:var(--accent)}
+    .det-clear-timer-row{display:flex;align-items:center;gap:8px;font-family:var(--font-mono);font-size:10px;color:var(--muted)}
+    .det-clear-timer-row input[type=number]{width:54px;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:var(--font-mono);font-size:12px;padding:4px 6px;border-radius:2px;text-align:center}
+    .det-clear-timer-row input[type=number]:focus{outline:none;border-color:var(--accent)}
   </style>
 </head>
 <body>
@@ -364,10 +388,53 @@
     <!-- SIDEBAR -->
     <div class="detection-sidebar">
 
+      <!-- DETECTION ALERT INDICATOR -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Detection Alert</span>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="det-badge" id="alert-feed-badge">NO TOPIC</span>
+            <span class="panel-badge">std_msgs/String</span>
+          </div>
+        </div>
+        <div class="det-alert-panel-body">
+
+          <!-- Big status indicator -->
+          <div class="det-alert-indicator no-topic" id="det-alert-indicator">
+            <div class="det-alert-dot" id="det-alert-dot"></div>
+            <div class="det-alert-state" id="det-alert-state">NO TOPIC</div>
+            <div class="det-alert-label" id="det-alert-label"></div>
+          </div>
+
+          <div class="det-alert-meta">
+            <span id="det-alert-last-seen">Last detection: --</span>
+            <span id="det-alert-count">Count: 0</span>
+          </div>
+
+          <!-- Alert topic config -->
+          <div class="det-alert-topic-form">
+            <label>ALERT TOPIC (std_msgs/String)</label>
+            <input id="det-alert-topic-input" type="text" value="/robot/detections/alert" placeholder="/robot/detections/alert">
+            <button class="btn-primary" style="margin-top:4px" onclick="applyAlertTopic()">APPLY ALERT TOPIC</button>
+          </div>
+
+          <!-- Auto-clear timer -->
+          <div class="det-clear-timer-row">
+            <label for="det-clear-secs">AUTO-CLEAR AFTER</label>
+            <input type="number" id="det-clear-secs" value="5" min="1" max="60">
+            <span>seconds of no new message</span>
+          </div>
+
+          <p style="font-family:var(--font-mono);font-size:10px;color:var(--muted);line-height:1.6">
+            AI script publishes the detected label (e.g. <span style="color:var(--warn)">"Person"</span>) to trigger RED alert, or an empty string <span style="color:var(--muted)">&nbsp;""&nbsp;</span> to explicitly clear.
+          </p>
+        </div>
+      </div>
+
       <!-- TOPIC CONFIG -->
       <div class="panel">
         <div class="panel-header">
-          <span class="panel-title">Topic Config</span>
+          <span class="panel-title">Image Topic Config</span>
           <span class="panel-badge">ROSBridge</span>
         </div>
         <div class="det-topic-form">
@@ -571,6 +638,9 @@
 
     // ── DETECTION IMAGE FEED ──
     initDetectionSubscriber(DETECTION_TOPIC);
+
+    // ── DETECTION ALERT INDICATOR ──
+    initAlertSubscriber(ALERT_TOPIC);
 
     // ── DOCKING STATUS — used for badge, undock button, and nav status override ──
     new ROSLIB.Topic({ ros:ros, name:'/robot/charge_manager/docking_status', messageType:'robotnik_msgs/BatteryDockingStatusStamped' })
@@ -1041,6 +1111,104 @@
       document.getElementById('det-tab-badge').style.background = 'var(--success)';
       document.getElementById('det-tab-badge').style.color = 'var(--bg)';
     });
+  }
+
+  // ── DETECTION ALERT INDICATOR ──
+  var _alertSub = null;
+  var _alertClearTimer = null;
+  var _alertCount = 0;
+  var ALERT_TOPIC = '/robot/detections/alert';
+
+  function setAlertState(state, label) {
+    // state: 'clear' | 'detected' | 'no-topic'
+    var ind   = document.getElementById('det-alert-indicator');
+    var st    = document.getElementById('det-alert-state');
+    var lb    = document.getElementById('det-alert-label');
+    var badge = document.getElementById('alert-feed-badge');
+    ind.className = 'det-alert-indicator ' + state;
+    if (state === 'detected') {
+      st.textContent  = 'DETECTED';
+      lb.textContent  = label || '';
+      badge.textContent = 'ALERT';
+      badge.className = 'det-badge error';
+      // Also flash the Detections tab dot
+      var tabDot = document.querySelector('#tab-det .tab-dot');
+      if (tabDot) { tabDot.style.background = 'var(--accent2)'; tabDot.style.boxShadow = '0 0 8px var(--accent2)'; }
+    } else if (state === 'clear') {
+      st.textContent  = 'CLEAR';
+      lb.textContent  = '';
+      badge.textContent = 'ACTIVE';
+      badge.className = 'det-badge live';
+      // Restore tab dot
+      var tabDot = document.querySelector('#tab-det .tab-dot');
+      if (tabDot) { tabDot.style.background = ''; tabDot.style.boxShadow = ''; }
+    } else {
+      st.textContent  = 'NO TOPIC';
+      lb.textContent  = '';
+      badge.textContent = 'NO TOPIC';
+      badge.className = 'det-badge';
+      var tabDot = document.querySelector('#tab-det .tab-dot');
+      if (tabDot) { tabDot.style.background = ''; tabDot.style.boxShadow = ''; }
+    }
+  }
+
+  function initAlertSubscriber(topic) {
+    if (_alertSub) { try { _alertSub.unsubscribe(); } catch(e) {} _alertSub = null; }
+    if (_alertClearTimer) { clearTimeout(_alertClearTimer); _alertClearTimer = null; }
+    ALERT_TOPIC = topic || ALERT_TOPIC;
+
+    if (!ros || !ros.isConnected) { setAlertState('no-topic'); return; }
+
+    setAlertState('clear');
+
+    _alertSub = new ROSLIB.Topic({
+      ros: ros,
+      name: ALERT_TOPIC,
+      messageType: 'std_msgs/String',
+      throttle_rate: 0,
+      queue_length: 1
+    });
+
+    _alertSub.subscribe(function(msg) {
+      if (_alertClearTimer) { clearTimeout(_alertClearTimer); _alertClearTimer = null; }
+
+      var label = '';
+      // Support plain string OR JSON {"detected":true,"label":"Person"} OR {"label":"Person"}
+      var raw = (msg.data || '').trim();
+      if (raw === '') {
+        setAlertState('clear');
+        return;
+      }
+      try {
+        var parsed = JSON.parse(raw);
+        if (parsed.detected === false || parsed.label === '') { setAlertState('clear'); return; }
+        label = parsed.label || parsed.class || parsed.type || raw;
+      } catch(e) {
+        label = raw; // plain string label
+      }
+
+      _alertCount++;
+      document.getElementById('det-alert-count').textContent = 'Count: ' + _alertCount;
+      document.getElementById('det-alert-last-seen').textContent = 'Last: ' + new Date().toLocaleTimeString();
+      setAlertState('detected', label);
+
+      // Auto-clear after N seconds
+      var secs = parseInt(document.getElementById('det-clear-secs').value, 10) || 5;
+      _alertClearTimer = setTimeout(function() {
+        _alertClearTimer = null;
+        setAlertState('clear');
+      }, secs * 1000);
+    });
+  }
+
+  function applyAlertTopic() {
+    var topic = document.getElementById('det-alert-topic-input').value.trim();
+    if (!topic) { showToast('Enter an alert topic name'); return; }
+    _alertCount = 0;
+    document.getElementById('det-alert-count').textContent = 'Count: 0';
+    document.getElementById('det-alert-last-seen').textContent = 'Last detection: --';
+    initAlertSubscriber(topic);
+    showToast('Alert subscribed to ' + topic);
   }
 
   function resubscribeDetection() {
