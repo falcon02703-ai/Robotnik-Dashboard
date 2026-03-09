@@ -154,12 +154,6 @@
     .det-topic-form input{background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:var(--font-mono);font-size:12px;padding:7px 10px;border-radius:2px;width:100%}
     .det-topic-form input:focus{outline:none;border-color:var(--accent)}
     .det-topic-form label{font-family:var(--font-mono);font-size:10px;color:var(--muted);letter-spacing:1px}
-    /* test panel */
-    .test-panel-body{padding:12px 16px;display:flex;flex-direction:column;gap:10px}
-    .test-panel-body p{font-family:var(--font-mono);font-size:10px;color:var(--muted);line-height:1.6;letter-spacing:.5px}
-    .file-drop-zone{border:1px dashed var(--border);border-radius:2px;padding:16px;text-align:center;font-family:var(--font-mono);font-size:10px;color:var(--muted);cursor:pointer;transition:all .15s;background:var(--bg)}
-    .file-drop-zone:hover{border-color:var(--accent);color:var(--accent)}
-    .file-drop-zone input{display:none}
     .det-fps{font-family:var(--font-mono);font-size:10px;color:var(--muted);letter-spacing:1px}
     .det-badge{font-family:var(--font-mono);font-size:10px;padding:2px 8px;border-radius:2px;background:rgba(255,255,255,.05);color:var(--muted);transition:all .3s}
     .det-badge.live{color:var(--success);background:rgba(0,255,136,.08);animation:pulse 2s infinite}
@@ -444,25 +438,6 @@
           <p style="font-family:var(--font-mono);font-size:10px;color:var(--muted);line-height:1.6;margin-top:4px">
             Change this to match the topic published by the AI detection script. Supports sensor_msgs/CompressedImage.
           </p>
-        </div>
-      </div>
-
-      <!-- TEST PANEL -->
-      <div class="panel">
-        <div class="panel-header">
-          <span class="panel-title">Feed Test</span>
-          <span class="panel-badge">Pre-AI testing</span>
-        </div>
-        <div class="test-panel-body">
-          <p>Publish a local image to the detection topic to verify the pipeline before the AI script is available.</p>
-          <div class="file-drop-zone" onclick="document.getElementById('test-img-input').click()">
-            <input type="file" id="test-img-input" accept="image/jpeg,image/png" onchange="publishTestImage(this)">
-            <span id="test-img-label">📁 CLICK TO SELECT IMAGE</span>
-          </div>
-          <button class="btn-secondary" id="test-loop-btn" onclick="toggleTestLoop()" style="width:100%;margin-top:4px" disabled>
-            LOOP TEST IMAGE
-          </button>
-          <p id="test-status" style="font-family:var(--font-mono);font-size:10px;color:var(--muted);text-align:center"></p>
         </div>
       </div>
 
@@ -1069,8 +1044,6 @@
 
   // ── DETECTION IMAGE FEED ──
   var _detSub = null;
-  var _testLoopTimer = null;
-  var _testImageData = null;
 
   var DETECTION_TOPIC = '/robot/detections/image_annotated';
 
@@ -1222,60 +1195,6 @@
     document.getElementById('det-badge').className = 'det-badge';
     initDetectionSubscriber(topic);
     showToast('Subscribed to ' + topic);
-  }
-
-  // ── TEST PUBLISHER ──
-  function publishTestImage(input) {
-    var file = input.files[0];
-    if (!file) return;
-    var reader = new FileReader();
-    reader.onload = function(e) {
-      // Strip data URL prefix to get raw base64
-      var b64 = e.target.result.split(',')[1];
-      var format = file.type === 'image/png' ? 'png' : 'jpeg';
-      _testImageData = { b64: b64, format: format };
-      document.getElementById('test-img-label').textContent = '✓ ' + file.name;
-      document.getElementById('test-loop-btn').disabled = false;
-      document.getElementById('test-status').textContent = '';
-      // Publish once immediately
-      publishTestFrame();
-      showToast('Test image loaded — published once');
-    };
-    reader.readAsDataURL(file);
-  }
-
-  function publishTestFrame() {
-    if (!_testImageData || !ros || !ros.isConnected) return;
-    var topic = new ROSLIB.Topic({
-      ros: ros,
-      name: document.getElementById('det-topic-input').value.trim() || DETECTION_TOPIC,
-      messageType: 'sensor_msgs/CompressedImage'
-    });
-    topic.publish(new ROSLIB.Message({
-      header: { seq: 0, stamp: { secs: 0, nsecs: 0 }, frame_id: 'camera' },
-      format: _testImageData.format,
-      data: _testImageData.b64
-    }));
-  }
-
-  function toggleTestLoop() {
-    var btn = document.getElementById('test-loop-btn');
-    var status = document.getElementById('test-status');
-    if (_testLoopTimer) {
-      clearInterval(_testLoopTimer);
-      _testLoopTimer = null;
-      btn.textContent = 'LOOP TEST IMAGE';
-      btn.style.borderColor = '';
-      btn.style.color = '';
-      status.textContent = '';
-    } else {
-      if (!_testImageData) { showToast('Load an image first'); return; }
-      _testLoopTimer = setInterval(publishTestFrame, 200); // ~5fps loop
-      btn.textContent = 'STOP LOOP';
-      btn.style.borderColor = 'var(--accent2)';
-      btn.style.color = 'var(--accent2)';
-      status.textContent = 'Publishing at ~5 fps...';
-    }
   }
 
   // ── CLOCK + TOAST ──
