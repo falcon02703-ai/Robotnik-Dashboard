@@ -115,7 +115,7 @@
     .btn-secondary{font-family:var(--font-ui);font-weight:700;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;padding:8px 14px;background:transparent;border:1px solid var(--accent2);color:var(--accent2);cursor:pointer;border-radius:2px;transition:all .15s;white-space:nowrap}
     .btn-secondary:hover{background:var(--accent2);color:var(--bg)}
     #ext-ws-log{margin:0 16px 12px;font-family:var(--font-mono);font-size:11px;color:var(--muted);background:var(--bg);border:1px solid var(--border);padding:8px;max-height:80px;overflow-y:auto;border-radius:2px}
-    .status-bar{display:flex;gap:24px;padding:8px 28px;background:var(--surface);border-top:1px solid var(--border);font-family:var(--font-mono);font-size:11px;color:var(--muted);position:relative}
+    .status-bar{display:flex;gap:24px;padding:8px 28px;background:var(--surface);border-top:1px solid var(--border);font-family:var(--font-mono);font-size:11px;color:var(--muted);position:fixed;bottom:0;left:0;right:0;z-index:80}
     .status-bar span{display:flex;align-items:center;gap:6px}
     #toast{position:fixed;bottom:60px;right:28px;background:var(--success);color:var(--bg);font-family:var(--font-mono);font-size:12px;padding:10px 18px;border-radius:3px;opacity:0;transform:translateY(10px);transition:all .25s;pointer-events:none;z-index:200}
     #toast.show{opacity:1;transform:translateY(0)}
@@ -132,7 +132,7 @@
 
     /* page visibility */
     .page{display:none}
-    .page.active{display:block}
+    .page.active{display:block;padding-bottom:38px}
     .camera-page-inner{padding:16px 28px;display:grid;grid-template-columns:1fr 1fr;gap:16px}
     .camera-page-inner .camera-feed-wrap video{width:100%;height:auto;border:1px solid var(--border);background:#000;display:block;border-radius:2px}
     .camera-feed-label{font-family:var(--font-mono);font-size:10px;color:var(--muted);padding:6px 0 2px;letter-spacing:1px}
