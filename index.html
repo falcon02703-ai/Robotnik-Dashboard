@@ -1206,6 +1206,1214 @@
   connectVNC();
 })();
 </script>
+</body><!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/eventemitter2/lib/eventemitter2.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/roslib/build/roslib.min.js"></script>
+  <style>
+    :root {
+      --bg:#0a0d10;--surface:#111620;--border:#1e2a38;
+      --accent:#00e5ff;--accent2:#ff6b35;--success:#00ff88;
+      --warn:#ffd600;--text:#ccd6f6;--muted:#7a8fa6;
+      --font-mono:'Share Tech Mono',monospace;--font-ui:'Rajdhani',sans-serif;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:var(--bg);color:var(--text);font-family:var(--font-ui);min-height:100vh}
+    body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,229,255,.015) 2px,rgba(0,229,255,.015) 4px);pointer-events:none;z-index:9999}
+    header{display:flex;align-items:center;justify-content:space-between;padding:14px 28px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
+    .logo{display:flex;align-items:center;gap:12px}
+    .logo-icon{width:36px;height:36px;background:var(--accent);clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%)}
+    .logo h1{font-size:22px;font-weight:700;letter-spacing:3px;color:var(--accent);text-transform:uppercase}
+    .logo span{font-size:11px;color:var(--muted);font-family:var(--font-mono);letter-spacing:2px;display:block}
+    #conn-status{font-family:var(--font-mono);font-size:12px;display:flex;align-items:center;gap:12px}
+    #login-btn{font-family:var(--font-mono);font-size:11px;letter-spacing:1px;padding:5px 12px;background:transparent;border:1px solid var(--accent);color:var(--accent);cursor:pointer;border-radius:2px;transition:all .15s}
+    #login-btn:hover{background:var(--accent);color:var(--bg)}
+    #login-btn.authed{border-color:var(--success);color:var(--success);pointer-events:none}
+    #conn-dot{width:10px;height:10px;border-radius:50%;background:var(--muted);transition:background .3s}
+    #conn-dot.connected{background:var(--success);animation:pulse 2s infinite}
+    #conn-dot.error{background:var(--accent2)}
+    @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(0,255,136,.4)}50%{box-shadow:0 0 0 6px rgba(0,255,136,0)}}
+    .main-grid{display:grid;grid-template-columns:1fr 420px;gap:16px;padding:16px 28px}
+    .panel{background:var(--surface);border:1px solid var(--border);border-radius:4px}
+    .panel-header{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--border);background:rgba(0,229,255,.04);border-radius:4px 4px 0 0}
+    .panel-title{font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--accent)}
+    .panel-badge{font-family:var(--font-mono);font-size:10px;color:var(--muted);background:rgba(255,255,255,.05);padding:2px 8px;border-radius:2px}
+    .map-panel{grid-column:1;overflow:hidden;border-radius:4px}
+    /* header≈65 + tabs≈40 + panel-header≈41 + map-controls≈44 + status-bar≈38 + grid padding+gap≈36 = ~264px */
+    #rviz-container{width:100%;height:calc(100vh - 264px);min-height:400px;max-height:none;background:#060910;display:block;position:relative;overflow:hidden;contain:strict}
+    #rviz-container > div{position:absolute!important;top:0!important;left:0!important;width:100%!important;height:100%!important;margin:0!important;overflow:hidden!important}
+    #rviz-container canvas{display:block;width:100%!important;height:100%!important;margin:0!important;object-fit:contain!important;max-height:100%!important}
+    #vnc-overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:rgba(6,9,16,.85);font-family:var(--font-mono);color:var(--muted);font-size:12px;z-index:10;transition:opacity .4s}
+    #vnc-overlay.hidden{opacity:0;pointer-events:none}
+    #vnc-spinner{width:28px;height:28px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    #vnc-status-text{color:var(--text);letter-spacing:1px}
+    #vnc-reconnect{font-family:var(--font-ui);font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:6px 14px;border:1px solid var(--accent2);color:var(--accent2);background:transparent;cursor:pointer;border-radius:2px;display:none}
+    #vnc-reconnect:hover{background:var(--accent2);color:var(--bg)}
+    .map-controls{display:flex;gap:8px;padding:10px 16px;border-top:1px solid var(--border);flex-wrap:wrap;align-items:center}
+    .mode-btn{font-family:var(--font-ui);font-size:12px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;padding:7px 14px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;border-radius:2px;transition:all .15s}
+    .mode-btn.active{border-color:var(--accent);color:var(--accent);background:rgba(0,229,255,.08)}
+    .mode-btn:hover{border-color:var(--text);color:var(--text)}
+    #map-mode-label{font-family:var(--font-mono);font-size:11px;color:var(--warn);margin-left:auto}
+    .btn-nav-cancel{font-family:var(--font-ui);font-weight:700;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;padding:5px 12px;background:transparent;border:1px solid var(--accent2);color:var(--accent2);cursor:pointer;border-radius:2px;transition:all .15s;white-space:nowrap}
+    .btn-nav-cancel:hover{background:var(--accent2);color:var(--bg)}
+    .btn-nav-cancel.cancelled{border-color:var(--success);color:var(--success)}
+    .btn-nav-cancel:disabled{opacity:.4;cursor:not-allowed}
+    .right-col{grid-column:2;display:flex;flex-direction:column;gap:16px;align-self:start;max-height:calc(100vh - 195px);overflow-y:auto;padding-bottom:4px;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+    .right-col::-webkit-scrollbar{width:4px}
+    .right-col::-webkit-scrollbar-track{background:transparent}
+    .right-col::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+    .pose-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border)}
+    .pose-cell{background:var(--surface);padding:10px 14px}
+    .pose-label{font-family:var(--font-mono);font-size:10px;color:var(--muted);letter-spacing:1px;margin-bottom:4px}
+    .pose-value{font-family:var(--font-mono);font-size:18px;color:var(--accent)}
+    .init-pose-form{padding:14px 16px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+    .init-pose-field{display:flex;flex-direction:column;gap:4px}
+    .init-pose-field input{background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:var(--font-mono);font-size:13px;padding:7px 10px;border-radius:2px;width:100%}
+    .init-pose-form input{background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:var(--font-mono);font-size:13px;padding:7px 10px;border-radius:2px;width:100%}
+    .init-pose-form input:focus{outline:none;border-color:var(--accent)}
+    .init-pose-form input::placeholder{color:var(--muted)}
+    .btn-primary{grid-column:1/-1;font-family:var(--font-ui);font-weight:700;font-size:13px;letter-spacing:2px;text-transform:uppercase;padding:10px;background:transparent;border:1px solid var(--accent);color:var(--accent);cursor:pointer;border-radius:2px;transition:all .15s}
+    .btn-primary:hover{background:var(--accent);color:var(--bg)}
+    .teleop-grid{display:grid;grid-template-columns:repeat(3,54px);grid-template-rows:repeat(3,54px);gap:6px;padding:12px 16px;justify-content:center}
+    .tele-btn{background:rgba(255,255,255,.03);border:1px solid var(--border);color:var(--text);font-size:20px;cursor:pointer;border-radius:3px;display:flex;align-items:center;justify-content:center;transition:all .1s;user-select:none}
+    .tele-btn:hover{border-color:var(--accent);color:var(--accent);background:rgba(0,229,255,.08)}
+    .tele-btn:active{background:var(--accent);color:var(--bg);border-color:var(--accent)}
+    .tele-btn.stop{font-size:12px;font-family:var(--font-ui);font-weight:700;letter-spacing:1px;color:var(--accent2);border-color:var(--accent2)}
+    .teleop-footer{display:flex;align-items:center;justify-content:flex-end;padding:0 16px 10px;gap:7px}
+    .teleop-footer label{font-family:var(--font-mono);font-size:10px;color:var(--muted);cursor:pointer;letter-spacing:1px;user-select:none}
+    .teleop-footer input[type=checkbox]{accent-color:var(--accent);width:12px;height:12px;cursor:pointer}
+    /* docking status indicator */
+    .dock-status-badge{font-family:var(--font-mono);font-size:10px;padding:2px 8px;border-radius:2px;background:rgba(255,255,255,.05);color:var(--muted);transition:all .3s}
+    .dock-status-badge.docked{color:var(--warn);background:rgba(255,214,0,.1)}
+    .dock-status-badge.undocked{color:var(--success);background:rgba(0,255,136,.08)}
+    /* undock button */
+    .undock-bar{padding:10px 16px;border-top:1px solid var(--border)}
+    .btn-undock{width:100%;font-family:var(--font-ui);font-weight:700;font-size:12px;letter-spacing:2px;text-transform:uppercase;padding:9px;background:transparent;border:1px solid var(--success);color:var(--success);cursor:pointer;border-radius:2px;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px}
+    .btn-undock:hover:not(:disabled){background:var(--success);color:var(--bg)}
+    .btn-undock:disabled{opacity:.4;cursor:not-allowed}
+    .btn-undock.running{border-color:var(--accent);color:var(--accent);animation:undock-pulse 1s infinite}
+    @keyframes undock-pulse{0%,100%{opacity:1}50%{opacity:.5}}
+    .undock-spinner{width:11px;height:11px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite;display:none}
+    .btn-undock.running .undock-spinner{display:inline-block}
+    /* ext WS connect = green, disconnect = red */
+    .btn-connect{font-family:var(--font-ui);font-weight:700;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;padding:8px 14px;background:transparent;border:1px solid var(--success);color:var(--success);cursor:pointer;border-radius:2px;transition:all .15s;white-space:nowrap}
+    .btn-connect:hover{background:var(--success);color:var(--bg)}
+    .btn-disconnect{font-family:var(--font-ui);font-weight:700;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;padding:8px 14px;background:transparent;border:1px solid var(--accent2);color:var(--accent2);cursor:pointer;border-radius:2px;transition:all .15s;white-space:nowrap}
+    .btn-disconnect:hover{background:var(--accent2);color:var(--bg)}
+    /* ext WS prominent status badge in panel header */
+    .ext-ws-status{font-family:var(--font-mono);font-size:10px;padding:2px 8px;border-radius:2px;background:rgba(255,255,255,.05);color:var(--muted);transition:all .3s;letter-spacing:1px}
+    .ext-ws-status.connected{color:var(--success);background:rgba(0,255,136,.1);animation:pulse 2s infinite}
+    .ext-ws-status.error{color:var(--accent2);background:rgba(255,107,53,.1)}
+    /* teleop buttons disabled state */
+    .teleop-grid.locked .tele-btn{opacity:.25;pointer-events:none}
+    .camera-panel{grid-column:1/-1}
+    .camera-inner{padding:12px 16px}
+    .camera-feed-wrap{flex:1;display:flex;flex-direction:column;min-width:0}
+    .camera-feed-wrap video{width:100%;height:auto;border:1px solid var(--border);background:#000;display:block}
+    .camera-feed-label{font-family:var(--font-mono);font-size:10px;color:var(--muted);padding:4px 0;letter-spacing:1px}
+    .camera-inner{padding:12px 16px;display:flex;gap:12px}
+    .ext-ws-form{padding:12px 16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .ext-ws-form input{flex:1;min-width:180px;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:var(--font-mono);font-size:13px;padding:7px 10px;border-radius:2px}
+    .ext-ws-form input:focus{outline:none;border-color:var(--accent2)}
+    .btn-secondary{font-family:var(--font-ui);font-weight:700;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;padding:8px 14px;background:transparent;border:1px solid var(--accent2);color:var(--accent2);cursor:pointer;border-radius:2px;transition:all .15s;white-space:nowrap}
+    .btn-secondary:hover{background:var(--accent2);color:var(--bg)}
+    #ext-ws-log{margin:0 16px 12px;font-family:var(--font-mono);font-size:11px;color:var(--muted);background:var(--bg);border:1px solid var(--border);padding:8px;max-height:80px;overflow-y:auto;border-radius:2px}
+    .status-bar{display:flex;gap:24px;padding:8px 28px;background:var(--surface);border-top:1px solid var(--border);font-family:var(--font-mono);font-size:11px;color:var(--muted);position:relative}
+    .status-bar span{display:flex;align-items:center;gap:6px}
+    #toast{position:fixed;bottom:60px;right:28px;background:var(--success);color:var(--bg);font-family:var(--font-mono);font-size:12px;padding:10px 18px;border-radius:3px;opacity:0;transform:translateY(10px);transition:all .25s;pointer-events:none;z-index:200}
+    #toast.show{opacity:1;transform:translateY(0)}
+
+    /* ── PAGE TABS ── */
+    .page-tabs{display:flex;align-items:center;gap:0;padding:0 28px;background:var(--surface);border-bottom:2px solid var(--border);position:sticky;top:65px;z-index:90}
+    .page-tab{position:relative;font-family:var(--font-ui);font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:10px 20px;color:var(--muted);cursor:pointer;border:none;background:transparent;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;display:flex;align-items:center;gap:8px}
+    .page-tab:hover{color:var(--text)}
+    .page-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+    .page-tab .tab-dot{width:7px;height:7px;border-radius:50%;background:var(--muted);transition:background .2s}
+    .page-tab.active .tab-dot{background:var(--accent);box-shadow:0 0 6px var(--accent)}
+    .tab-cam-badge{font-family:var(--font-mono);font-size:9px;color:var(--bg);background:var(--muted);padding:1px 5px;border-radius:2px;margin-left:4px;transition:background .2s}
+    .page-tab.active .tab-cam-badge{background:var(--accent)}
+
+    /* page visibility */
+    .page{display:none}
+    .page.active{display:block}
+    .camera-page-inner{padding:16px 28px;display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    .camera-page-inner .camera-feed-wrap video{width:100%;height:auto;border:1px solid var(--border);background:#000;display:block;border-radius:2px}
+    .camera-feed-label{font-family:var(--font-mono);font-size:10px;color:var(--muted);padding:6px 0 2px;letter-spacing:1px}
+    .cam-full-panel{background:var(--surface);border:1px solid var(--border);border-radius:4px;overflow:hidden;padding:12px 16px}
+    .cam-full-panel .panel-header{margin:-12px -16px 12px;padding:10px 16px;border-bottom:1px solid var(--border);background:rgba(0,229,255,.04);display:flex;align-items:center;justify-content:space-between}
+
+    /* ── DETECTION PAGE ── */
+    .detection-page-inner{padding:16px 28px;display:grid;grid-template-columns:1fr 340px;gap:16px;align-items:start}
+    .detection-feed-panel{background:var(--surface);border:1px solid var(--border);border-radius:4px}
+    .detection-feed-panel .panel-header{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--border);background:rgba(0,229,255,.04);border-radius:4px 4px 0 0}
+    .detection-img-wrap{padding:12px 16px;display:flex;flex-direction:column;gap:8px}
+    #detection-img{width:100%;display:block;border:1px solid var(--border);background:#000;border-radius:2px;min-height:300px;object-fit:contain}
+    .detection-placeholder{width:100%;min-height:300px;background:#060910;border:1px solid var(--border);border-radius:2px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--muted);font-family:var(--font-mono);font-size:11px;letter-spacing:1px}
+    .detection-placeholder-icon{font-size:36px;opacity:.3}
+    .detection-status-row{display:flex;align-items:center;justify-content:space-between;font-family:var(--font-mono);font-size:10px;color:var(--muted);padding:2px 0}
+    /* right sidebar */
+    .detection-sidebar{display:flex;flex-direction:column;gap:16px}
+    .det-topic-form{padding:12px 16px;display:flex;flex-direction:column;gap:8px}
+    .det-topic-form input{background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:var(--font-mono);font-size:12px;padding:7px 10px;border-radius:2px;width:100%}
+    .det-topic-form input:focus{outline:none;border-color:var(--accent)}
+    .det-topic-form label{font-family:var(--font-mono);font-size:10px;color:var(--muted);letter-spacing:1px}
+    /* test panel */
+    .test-panel-body{padding:12px 16px;display:flex;flex-direction:column;gap:10px}
+    .test-panel-body p{font-family:var(--font-mono);font-size:10px;color:var(--muted);line-height:1.6;letter-spacing:.5px}
+    .file-drop-zone{border:1px dashed var(--border);border-radius:2px;padding:16px;text-align:center;font-family:var(--font-mono);font-size:10px;color:var(--muted);cursor:pointer;transition:all .15s;background:var(--bg)}
+    .file-drop-zone:hover{border-color:var(--accent);color:var(--accent)}
+    .file-drop-zone input{display:none}
+    .det-fps{font-family:var(--font-mono);font-size:10px;color:var(--muted);letter-spacing:1px}
+    .det-badge{font-family:var(--font-mono);font-size:10px;padding:2px 8px;border-radius:2px;background:rgba(255,255,255,.05);color:var(--muted);transition:all .3s}
+    .det-badge.live{color:var(--success);background:rgba(0,255,136,.08);animation:pulse 2s infinite}
+    .det-badge.error{color:var(--accent2);background:rgba(255,107,53,.1)}
+  </style>
+</head>
+<body>
+<header>
+  <div class="logo">
+    <div class="logo-icon"></div>
+    <div>
+      <h1>Dashboard</h1>
+      <span>ROBOTNIK RBWCH — NAVIGATION DASHBOARD</span>
+    </div>
+  </div>
+  <div id="conn-status">
+    <button id="login-btn" onclick="robotLogin()">LOGIN TO ROBOT</button>
+    <div id="conn-dot"></div>
+    <span id="conn-text">CONNECTING...</span>
+  </div>
+</header>
+
+<!-- ── PAGE TAB BAR ── -->
+<div class="page-tabs">
+  <button class="page-tab active" id="tab-nav" onclick="switchTab('nav')">
+    <span class="tab-dot"></span> Navigation
+  </button>
+  <button class="page-tab" id="tab-cam" onclick="switchTab('cam')">
+    <span class="tab-dot"></span> Cameras
+    <span class="tab-cam-badge" id="cam-tab-badge">WebRTC</span>
+  </button>
+  <button class="page-tab" id="tab-det" onclick="switchTab('det')">
+    <span class="tab-dot"></span> Detections
+    <span class="tab-cam-badge" id="det-tab-badge">ROS</span>
+  </button>
+</div>
+
+<!-- ══════════════ PAGE: NAVIGATION ══════════════ -->
+<div class="page active" id="page-nav">
+<div class="main-grid">
+  <!-- MAP -->
+  <div class="panel map-panel">
+    <div class="panel-header">
+      <span class="panel-title">Map &amp; Navigation</span>
+      <div style="display:flex;align-items:center;gap:8px">
+        <button class="btn-nav-cancel" id="nav-cancel-btn" onclick="stopAll()">⊘ STOP ALL</button>
+        <span class="panel-badge">noVNC → wss:/rviz_web → rviz-vnc:5910</span>
+      </div>
+    </div>
+    <div id="rviz-container">
+      <div id="vnc-overlay">
+        <div id="vnc-spinner"></div>
+        <span id="vnc-status-text">CONNECTING TO RVIZ VNC...</span>
+        <button id="vnc-reconnect" onclick="connectVNC()">RECONNECT</button>
+      </div>
+    </div>
+    <div class="map-controls">
+      <span id="map-mode-label">&#9658; USE RVIZ TOOLS INSIDE THE VIEW TO SET GOALS</span>
+    </div>
+  </div>
+
+  <!-- RIGHT COLUMN -->
+  <div class="right-col">
+    <!-- POSE -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Robot Pose</span>
+        <span class="panel-badge">/robot/amcl_pose</span>
+      </div>
+      <div class="pose-grid">
+        <div class="pose-cell"><div class="pose-label">X (m)</div><div class="pose-value" id="poseX">--</div></div>
+        <div class="pose-cell"><div class="pose-label">Y (m)</div><div class="pose-value" id="poseY">--</div></div>
+        <div class="pose-cell"><div class="pose-label">YAW (deg)</div><div class="pose-value" id="poseTheta">--</div></div>
+        <div class="pose-cell"><div class="pose-label">LIN VEL</div><div class="pose-value" id="poseLinVel">--</div></div>
+        <div class="pose-cell"><div class="pose-label">ANG VEL</div><div class="pose-value" id="poseAngVel">--</div></div>
+        <div class="pose-cell"><div class="pose-label">NAV STATE</div><div class="pose-value" id="navStatus" style="font-size:13px;color:var(--warn)">--</div></div>
+      </div>
+    </div>
+
+    <!-- TELEOP -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Teleop</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="dock-status-badge" id="dock-badge">DOCK: UNKNOWN</span>
+          <span class="panel-badge">/robot/web_teleop/cmd_vel</span>
+        </div>
+      </div>
+      <div class="teleop-grid locked" id="teleop-grid">
+        <div></div>
+        <button class="tele-btn" onmousedown="startMoving(0.4,0)"  onmouseup="stopMoving()" onmouseleave="stopMoving()" ontouchstart="startMoving(0.4,0)"  ontouchend="stopMoving()">&#9650;</button>
+        <div></div>
+        <button class="tele-btn" onmousedown="startMoving(0,0.6)"  onmouseup="stopMoving()" onmouseleave="stopMoving()" ontouchstart="startMoving(0,0.6)"  ontouchend="stopMoving()">&#9664;</button>
+        <button class="tele-btn stop" onmousedown="stopMoving()">STOP</button>
+        <button class="tele-btn" onmousedown="startMoving(0,-0.6)" onmouseup="stopMoving()" onmouseleave="stopMoving()" ontouchstart="startMoving(0,-0.6)" ontouchend="stopMoving()">&#9654;</button>
+        <div></div>
+        <button class="tele-btn" onmousedown="startMoving(-0.4,0)" onmouseup="stopMoving()" onmouseleave="stopMoving()" ontouchstart="startMoving(-0.4,0)" ontouchend="stopMoving()">&#9660;</button>
+        <div></div>
+      </div>
+      <div class="undock-bar" id="undock-bar" style="display:none">
+        <button class="btn-undock" id="undock-btn" onclick="triggerUndock()">
+          <span class="undock-spinner" id="undock-spinner"></span>
+          <span id="undock-btn-label">UNDOCK TO ENABLE TELEOP</span>
+        </button>
+      </div>
+      <div class="teleop-footer">
+        <input type="checkbox" id="arrow-key-toggle" onchange="arrowKeysEnabled=this.checked">
+        <label for="arrow-key-toggle">SUPPORT ARROW KEYS</label>
+      </div>
+    </div>
+
+    <!-- TASK 2: EXTERNAL WS -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">External Goal Source</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="ext-ws-status error" id="ext-ws-header-status">DISCONNECTED</span>
+          <span class="panel-badge">WebSocket to goal topic</span>
+        </div>
+      </div>
+      <div class="ext-ws-form">
+        <input id="ext-ws-url" type="text" placeholder="ws://host:port" value="wss://nhb-raas-staging.senserbot.com/security-robot-server/dashboard">
+        <button class="btn-connect" id="ext-ws-btn" onclick="toggleExternalWS()">CONNECT</button>
+      </div>
+      <div id="ext-ws-log">Awaiting external WebSocket connection...</div>
+    </div>
+
+    <!-- TASK 3: INITIAL POSE -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Set Initial Pose</span>
+        <span class="panel-badge">/robot/initialpose</span>
+      </div>
+      <div class="init-pose-form">
+        <div class="init-pose-field">
+          <div class="pose-label">X (m)</div>
+          <input id="init-x"   type="number" step="0.01" placeholder="0.0" value="0.0">
+        </div>
+        <div class="init-pose-field">
+          <div class="pose-label">Y (m)</div>
+          <input id="init-y"   type="number" step="0.01" placeholder="0.0" value="0.0">
+        </div>
+        <div class="init-pose-field">
+          <div class="pose-label">YAW (rad)</div>
+          <input id="init-yaw" type="number" step="0.01" placeholder="0.0" value="0.0">
+        </div>
+        <button class="btn-primary" onclick="publishInitialPose()">PUBLISH INITIAL POSE</button>
+      </div>
+    </div>
+  </div><!-- /.right-col -->
+
+</div><!-- /.main-grid -->
+</div><!-- /#page-nav -->
+
+<!-- ══════════════ PAGE: CAMERAS ══════════════ -->
+<div class="page" id="page-cam">
+  <div class="camera-page-inner">
+    <div class="cam-full-panel">
+      <div class="panel-header">
+        <span class="panel-title">Front Camera</span>
+        <span class="panel-badge">WebRTC · mid:2</span>
+      </div>
+      <video id="camera-front" autoplay playsinline muted style="width:100%;border:1px solid var(--border);background:#000;display:block;border-radius:2px"></video>
+      <div class="camera-feed-label">FRONT &nbsp;<span id="camera-front-status" style="color:var(--muted)">CONNECTING...</span></div>
+    </div>
+    <div class="cam-full-panel">
+      <div class="panel-header">
+        <span class="panel-title">Top PTZ Camera</span>
+        <span class="panel-badge">WebRTC · mid:1</span>
+      </div>
+      <video id="camera-top" autoplay playsinline muted style="width:100%;border:1px solid var(--border);background:#000;display:block;border-radius:2px"></video>
+      <div class="camera-feed-label">TOP PTZ &nbsp;<span id="camera-top-status" style="color:var(--muted)">CONNECTING...</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ PAGE: DETECTIONS ══════════════ -->
+<div class="page" id="page-det">
+  <div class="detection-page-inner">
+
+    <!-- MAIN FEED -->
+    <div class="detection-feed-panel">
+      <div class="panel-header">
+        <span class="panel-title">Detected Image Feed</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="det-badge" id="det-badge">NO FEED</span>
+          <span class="panel-badge">sensor_msgs/CompressedImage</span>
+        </div>
+      </div>
+      <div class="detection-img-wrap">
+        <!-- Placeholder shown until first image arrives -->
+        <div class="detection-placeholder" id="det-placeholder">
+          <span class="detection-placeholder-icon">🔍</span>
+          <span>AWAITING DETECTION FEED</span>
+          <span style="color:var(--border);font-size:10px" id="det-topic-display">/robot/detections/image_annotated</span>
+        </div>
+        <!-- Image shown once feed is live (hidden initially) -->
+        <img id="detection-img" alt="Detection feed" style="display:none">
+      </div>
+    </div>
+
+    <!-- SIDEBAR -->
+    <div class="detection-sidebar">
+
+      <!-- TOPIC CONFIG -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Topic Config</span>
+          <span class="panel-badge">ROSBridge</span>
+        </div>
+        <div class="det-topic-form">
+          <label>IMAGE TOPIC</label>
+          <input id="det-topic-input" type="text" value="/robot/detections/image_annotated" placeholder="/robot/detections/image_annotated">
+          <button class="btn-primary" style="margin-top:4px" onclick="resubscribeDetection()">APPLY TOPIC</button>
+          <p style="font-family:var(--font-mono);font-size:10px;color:var(--muted);line-height:1.6;margin-top:4px">
+            Change this to match the topic published by the AI detection script. Supports sensor_msgs/CompressedImage.
+          </p>
+        </div>
+      </div>
+
+      <!-- TEST PANEL -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Feed Test</span>
+          <span class="panel-badge">Pre-AI testing</span>
+        </div>
+        <div class="test-panel-body">
+          <p>Publish a local image to the detection topic to verify the pipeline before the AI script is available.</p>
+          <div class="file-drop-zone" onclick="document.getElementById('test-img-input').click()">
+            <input type="file" id="test-img-input" accept="image/jpeg,image/png" onchange="publishTestImage(this)">
+            <span id="test-img-label">📁 CLICK TO SELECT IMAGE</span>
+          </div>
+          <button class="btn-secondary" id="test-loop-btn" onclick="toggleTestLoop()" style="width:100%;margin-top:4px" disabled>
+            LOOP TEST IMAGE
+          </button>
+          <p id="test-status" style="font-family:var(--font-mono);font-size:10px;color:var(--muted);text-align:center"></p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="status-bar">
+  <span>ROSBRIDGE <span id="sb-ros" style="color:var(--muted)">DISCONNECTED</span></span>
+  <span>EXT-WS <span id="sb-ext" style="color:var(--accent2)">DISCONNECTED</span></span>
+  <span>MAP <span id="sb-map" style="color:var(--muted)">NO DATA</span></span>
+  <span>LAST GOAL <span id="sb-goal" style="color:var(--muted)">--</span></span>
+  <span style="position:absolute;right:28px">TIME <span id="sb-time">--</span></span>
+</div>
+
+<div id="toast"></div>
+
+<script>
+  // ── ROSBRIDGE ──
+  var ROBOT_IP = '192.168.0.200';
+
+  function robotLogin() {
+    var btn = document.getElementById('login-btn');
+    btn.textContent = 'LOGGING IN...';
+    btn.disabled = true;
+    var loginUrl = 'https://192.168.0.200/auth/realms/robotnik-realm/protocol/openid-connect/auth'
+      + '?client_id=dashboard-frontend'
+      + '&redirect_uri=' + encodeURIComponent('https://192.168.0.200/app')
+      + '&response_type=code&scope=openid';
+    var popup = window.open(loginUrl, 'robot-login', 'width=420,height=520,left=200,top=100');
+    // Close popup as soon as rosbridge connects (cookie now valid)
+    var rosTimer = setInterval(function() {
+      if (ros.isConnected) {
+        clearInterval(rosTimer);
+        if (popup && !popup.closed) popup.close();
+        onLoginDone(btn);
+      } else {
+        try { ros.connect('wss://' + ROBOT_IP + '/ws'); } catch(e) {}
+      }
+    }, 1000);
+    // Fallback: if user manually closes popup
+    var popupTimer = setInterval(function() {
+      if (!popup || popup.closed) {
+        clearInterval(popupTimer);
+        clearInterval(rosTimer);
+        onLoginDone(btn);
+      }
+    }, 500);
+  }
+
+  function onLoginDone(btn) {
+    btn.textContent = 'LOGGED IN';
+    btn.className = 'authed';
+    btn.disabled = false;
+    ros.connect('wss://' + ROBOT_IP + '/ws');
+    if (window._cameraPC) { window._cameraPC.close(); window._cameraPC = null; }
+    connectCamera();
+    if (window._vncRfb) { try { window._vncRfb.disconnect(); } catch(_) {} }
+    connectVNC();
+  }
+
+  function forceVncResize() {
+    var c = document.getElementById('rviz-container');
+    var h = c.style.height || '';
+    c.style.height = (c.offsetHeight + 1) + 'px';
+    requestAnimationFrame(function() { c.style.height = h; });
+  }
+
+  // Re-trigger layout when window is resized or tab becomes visible again
+  // (browsers can suspend/throttle layout while tabbed away, causing stale vh values)
+  function onLayoutRefresh() {
+    var c = document.getElementById('rviz-container');
+    c.style.height = '';
+    requestAnimationFrame(function() {
+      forceVncResize();
+    });
+  }
+  window.addEventListener('resize', onLayoutRefresh);
+  document.addEventListener('visibilitychange', function() {
+    if (document.visibilityState === 'visible') onLayoutRefresh();
+  });
+  var ros = new ROSLIB.Ros({ url: 'wss://' + ROBOT_IP + '/ws' });
+
+  ros.on('connection', function() {
+    document.getElementById('conn-dot').className = 'connected';
+    document.getElementById('conn-text').textContent = 'CONNECTED -- ' + ROBOT_IP;
+    document.getElementById('sb-ros').textContent = 'CONNECTED';
+    document.getElementById('sb-ros').style.color = 'var(--success)';
+    initTopics();
+  });
+  ros.on('error', function() {
+    document.getElementById('conn-dot').className = 'error';
+    document.getElementById('conn-text').textContent = 'CONNECTION ERROR';
+    document.getElementById('sb-ros').textContent = 'ERROR';
+    document.getElementById('sb-ros').style.color = 'var(--accent2)';
+  });
+  ros.on('close', function() {
+    document.getElementById('conn-dot').className = '';
+    document.getElementById('conn-text').textContent = 'DISCONNECTED';
+    document.getElementById('sb-ros').textContent = 'DISCONNECTED';
+    document.getElementById('sb-ros').style.color = 'var(--accent2)';
+  });
+
+  // ── TOPICS ──
+  var cmdVelTopic, goalTopic, initialPoseTopic;
+
+  function initTopics() {
+    cmdVelTopic = new ROSLIB.Topic({ ros:ros, name:'/robot/web_teleop/cmd_vel', messageType:'geometry_msgs/Twist' });
+
+    // TASK 1 - navigation goal
+    goalTopic = new ROSLIB.Topic({ ros:ros, name:'/robot/move_base_flex/move_base_simple/goal', messageType:'geometry_msgs/PoseStamped' });
+
+    // TASK 3 - initial pose
+    initialPoseTopic = new ROSLIB.Topic({ ros:ros, name:'/robot/initialpose', messageType:'geometry_msgs/PoseWithCovarianceStamped' });
+
+    // AMCL pose display + map arrow
+    new ROSLIB.Topic({ ros:ros, name:'/robot/amcl_pose', messageType:'geometry_msgs/PoseWithCovarianceStamped' })
+      .subscribe(function(msg) {
+        var p = msg.pose.pose;
+        document.getElementById('poseX').textContent = p.position.x.toFixed(3);
+        document.getElementById('poseY').textContent = p.position.y.toFixed(3);
+        // Yaw from quaternion: atan2(2*(w*z+x*y), 1-2*(y*y+z*z))
+        var siny = 2*(p.orientation.w*p.orientation.z + p.orientation.x*p.orientation.y);
+        var cosy = 1 - 2*(p.orientation.y*p.orientation.y + p.orientation.z*p.orientation.z);
+        var yawDeg = Math.atan2(siny, cosy) * 180 / Math.PI;
+        document.getElementById('poseTheta').textContent = yawDeg.toFixed(1);
+
+      });
+
+    // Odometry
+    new ROSLIB.Topic({ ros:ros, name:'/robot/robotnik_base_control/odom', messageType:'nav_msgs/Odometry' })
+      .subscribe(function(msg) {
+        var lin = msg.twist.twist.linear.x;
+        var ang = msg.twist.twist.angular.z;
+        document.getElementById('poseLinVel').textContent = lin.toFixed(3);
+        document.getElementById('poseAngVel').textContent = ang.toFixed(3);
+        var moving = Math.abs(lin) > 0.01 || Math.abs(ang) > 0.01;
+        if (moving !== window._isMoving) {
+          window._isMoving = moving;
+          updateNavStatus();
+        }
+      });
+
+    // Navigation state
+    new ROSLIB.Topic({ ros:ros, name:'/robot/robot_local_control/NavigationComponent/state', messageType:'robotnik_msgs/State' })
+      .subscribe(function(msg) {
+        updateNavStatus(msg.state_description || msg.state || '--');
+      });
+
+    // Base hardware state — catches e-stop which NavigationComponent doesn't reflect
+    new ROSLIB.Topic({ ros:ros, name:'/robot/robotnik_base_hw/state', messageType:'robotnik_msgs/State' })
+      .subscribe(function(msg) {
+        var upper = String(msg.state_description || '').toUpperCase();
+        if (upper === 'EMERGENCY' || upper === 'FAILURE') {
+          window._baseHwEmergency = true;
+          var el = document.getElementById('navStatus');
+          el.textContent = 'EMERG. STOP';
+          el.style.color = 'var(--accent2)';
+        } else {
+          var wasEmergency = window._baseHwEmergency;
+          window._baseHwEmergency = false;
+          // Re-render from nav state if we just cleared an emergency
+          if (wasEmergency) updateNavStatus();
+        }
+      });
+
+    // ── EMERGENCY STOP ──
+    new ROSLIB.Topic({ ros:ros, name:'/robot/robotnik_base_hw/emergency_stop', messageType:'std_msgs/Bool' })
+      .subscribe(function(msg) {
+        window._baseHwEmergency = msg.data === true;
+        updateNavStatus();
+      });
+
+    // ── DETECTION IMAGE FEED ──
+    initDetectionSubscriber(DETECTION_TOPIC);
+
+    // ── DOCKING STATUS — used for badge, undock button, and nav status override ──
+    new ROSLIB.Topic({ ros:ros, name:'/robot/charge_manager/docking_status', messageType:'robotnik_msgs/BatteryDockingStatusStamped' })
+      .subscribe(function(msg) {
+        var docked = msg.status && msg.status.contact_relay_status === true;
+        window._isDocked = docked;
+        updateDockUI(docked);
+        updateNavStatus(); // re-render nav status with updated dock knowledge
+      });
+
+    // ── UNCHARGE STATE — true completion: READY after a running procedure ──
+    // state 300 = READY, but only unlock once we were actively undocking.
+    // Small delay added since the state flips slightly before the robot fully stops.
+    new ROSLIB.Topic({ ros:ros, name:'/robot/robot_local_control/NavigationComponent/UnchargeComponent/state', messageType:'robotnik_msgs/State' })
+      .subscribe(function(msg) {
+        if (window._undocking && msg.state === 300) {
+          window._undocking = false;
+          window._undockDelay = true;
+          setTimeout(function() {
+            window._undockDelay = false;
+            setTeleopLocked(false);
+            var btn = document.getElementById('undock-btn');
+            btn.classList.remove('running');
+            btn.disabled = false;
+            document.getElementById('undock-btn-label').textContent = 'UNDOCK TO ENABLE TELEOP';
+            document.getElementById('undock-bar').style.display = 'none';
+            showToast('Undocked — teleop ready');
+          }, 15000);
+        }
+      });
+  }
+
+  function yawToQuaternion(yaw) {
+    return { x:0, y:0, z:Math.sin(yaw/2), w:Math.cos(yaw/2) };
+  }
+
+  // ── MAP (RViz iframe - no ros2d needed) ──
+  // Map is displayed via RViz VNC stream at /rviz_web
+
+  // ── MAP CLICK MODES ──
+  var mapMode = 'goal';
+  function setMode(mode) {
+    mapMode = mode;
+    document.getElementById('btn-goal').classList.toggle('active', mode === 'goal');
+    document.getElementById('btn-initpose').classList.toggle('active', mode === 'initpose');
+    document.getElementById('map-mode-label').textContent =
+      mode === 'goal' ? '> CLICK MAP TO SET GOAL POSE' : '> CLICK MAP TO SET INITIAL POSE';
+  }
+
+  // NOTE: Click-to-set-goal on the VNC canvas is not supported — the VNC stream
+  // is a pixel mirror with no knowledge of the map coordinate frame. Use the
+  // RViz "2D Nav Goal" tool inside the VNC view directly, or use the form fields below.
+
+  // ── TASK 1: GOAL POSE ──
+  function publishGoalPose(x, y, yaw) {
+    if (!goalTopic) { showToast('Not connected to ROS'); return; }
+    goalTopic.publish(new ROSLIB.Message({
+      header: { frame_id:'map', stamp:{ secs:0, nsecs:0 } },
+      pose: { position:{ x:x, y:y, z:0 }, orientation:yawToQuaternion(yaw) }
+    }));
+    var label = 'x:' + x.toFixed(2) + ' y:' + y.toFixed(2);
+    document.getElementById('sb-goal').textContent = label;
+    document.getElementById('sb-goal').style.color = 'var(--warn)';
+    showToast('Goal sent (' + x.toFixed(2) + ', ' + y.toFixed(2) + ')');
+  }
+
+  // ── TASK 3: INITIAL POSE ──
+  function publishInitialPose() {
+    if (!initialPoseTopic) { showToast('Not connected to ROS'); return; }
+    var x   = parseFloat(document.getElementById('init-x').value)   || 0;
+    var y   = parseFloat(document.getElementById('init-y').value)   || 0;
+    var yaw = parseFloat(document.getElementById('init-yaw').value) || 0;
+    initialPoseTopic.publish(new ROSLIB.Message({
+      header: { frame_id:'map', stamp:{ secs:0, nsecs:0 } },
+      pose: {
+        pose: { position:{ x:x, y:y, z:0 }, orientation:yawToQuaternion(yaw) },
+        covariance: [0.25,0,0,0,0,0, 0,0.25,0,0,0,0, 0,0,0,0,0,0, 0,0,0,0,0,0, 0,0,0,0,0,0, 0,0,0,0,0,0.0685]
+      }
+    }));
+    showToast('Initial pose set (' + x.toFixed(2) + ', ' + y.toFixed(2) + ')');
+  }
+
+  // ── TASK 2: EXTERNAL WEBSOCKET ──
+  // Expects JSON: {"x": 1.0, "y": 2.0, "yaw": 0.0}
+  var extWS = null;
+  function logExt(msg) {
+    var el = document.getElementById('ext-ws-log');
+    el.textContent = '[' + new Date().toLocaleTimeString() + '] ' + msg + '\n' + el.textContent;
+  }
+  function toggleExternalWS() {
+    if (extWS && extWS.readyState === WebSocket.OPEN) { extWS.close(); return; }
+    var url = document.getElementById('ext-ws-url').value.trim();
+    try { extWS = new WebSocket(url); } catch(e) { logExt('ERROR: ' + e.message); return; }
+    extWS.onopen = function() {
+      var btn = document.getElementById('ext-ws-btn');
+      btn.textContent = 'DISCONNECT';
+      btn.className = 'btn-disconnect';
+      document.getElementById('sb-ext').textContent = 'CONNECTED';
+      document.getElementById('sb-ext').style.color = 'var(--success)';
+      var badge = document.getElementById('ext-ws-header-status');
+      badge.textContent = 'CONNECTED'; badge.className = 'ext-ws-status connected';
+      logExt('Connected to ' + url);
+    };
+    extWS.onmessage = function(event) {
+      try {
+        var msg = JSON.parse(event.data);
+        if (msg.topic && msg.data !== undefined) {
+          if (msg.topic === '/robot/rms/simple_goal' && msg.data.x !== undefined) {
+            logExt('[' + msg.topic + '] goal x:' + msg.data.x + ' y:' + msg.data.y + ' yaw:' + (msg.data.yaw||0));
+            publishGoalPose(parseFloat(msg.data.x), parseFloat(msg.data.y), parseFloat(msg.data.yaw||0));
+          } else {
+            var t = new ROSLIB.Topic({ ros:ros, name:msg.topic, messageType: msg.type || 'std_msgs/String' });
+            t.publish(new ROSLIB.Message(msg.data));
+            logExt('[' + msg.topic + '] ' + JSON.stringify(msg.data));
+          }
+        } else if (msg.x !== undefined && msg.y !== undefined) {
+          logExt('[goal] x:' + msg.x + ' y:' + msg.y + ' yaw:' + (msg.yaw||0));
+          publishGoalPose(parseFloat(msg.x), parseFloat(msg.y), parseFloat(msg.yaw||0));
+        } else { logExt('Unknown format: ' + event.data); }
+      } catch(e) { logExt('Parse error: ' + e.message); }
+    };
+    extWS.onerror = function() {
+      logExt('Error');
+      document.getElementById('sb-ext').style.color = 'var(--accent2)';
+      var badge = document.getElementById('ext-ws-header-status');
+      badge.textContent = 'ERROR'; badge.className = 'ext-ws-status error';
+    };
+    extWS.onclose = function() {
+      var btn = document.getElementById('ext-ws-btn');
+      btn.textContent = 'CONNECT';
+      btn.className = 'btn-connect';
+      document.getElementById('sb-ext').textContent = 'DISCONNECTED';
+      document.getElementById('sb-ext').style.color = 'var(--accent2)';
+      var badge = document.getElementById('ext-ws-header-status');
+      badge.textContent = 'DISCONNECTED'; badge.className = 'ext-ws-status error';
+      logExt('Disconnected');
+    };
+  }
+
+  // ── STOP ALL ──
+  window._undockProcedureId = null;
+
+  function stopAll() {
+    if (!ros || !ros.isConnected) { showToast('Not connected to ROS'); return; }
+    var btn = document.getElementById('nav-cancel-btn');
+    btn.disabled = true;
+
+    // Zero velocity immediately
+    if (cmdVelTopic) cmdVelTopic.publish(new ROSLIB.Message({ linear:{x:0,y:0,z:0}, angular:{x:0,y:0,z:0} }));
+
+    // Cancel all navigation components with id:0 (matches any running procedure on GoToMBF/Move)
+    var genericReq = new ROSLIB.ServiceRequest({
+      header: { id: 0, priority: 0, stamp: { secs: 0, nsecs: 0 }, name: 'cancel' }
+    });
+
+    var calls = 0, total = 3;
+    function onDone() {
+      calls++;
+      if (calls >= total) {
+        btn.disabled = false;
+        btn.classList.add('cancelled');
+        btn.textContent = '✓ STOPPED';
+        setTimeout(function() {
+          btn.classList.remove('cancelled');
+          btn.textContent = '⊘ STOP ALL';
+        }, 2000);
+        showToast('All navigation stopped');
+      }
+    }
+
+    new ROSLIB.Service({ ros:ros, name:'/robot/robot_local_control/NavigationComponent/GoToMBFComponent/cancel', serviceType:'procedures_msgs/ProcedureQuery' })
+      .callService(genericReq, onDone, function(e) { console.warn('[StopAll GoToMBF]', e); onDone(); });
+
+    new ROSLIB.Service({ ros:ros, name:'/robot/robot_local_control/NavigationComponent/MoveComponent/cancel', serviceType:'procedures_msgs/ProcedureQuery' })
+      .callService(genericReq, onDone, function(e) { console.warn('[StopAll Move]', e); onDone(); });
+
+    // UnchargeComponent requires the specific procedure ID assigned at add time
+    if (window._undockProcedureId !== null) {
+      var undockReq = new ROSLIB.ServiceRequest({
+        header: { id: window._undockProcedureId, priority: 0, stamp: { secs: 0, nsecs: 0 }, name: 'cancel' }
+      });
+      new ROSLIB.Service({ ros:ros, name:'/robot/robot_local_control/NavigationComponent/UnchargeComponent/cancel', serviceType:'procedures_msgs/ProcedureQuery' })
+        .callService(undockReq, function() {
+          window._undockProcedureId = null;
+          onDone();
+        }, function(e) { console.warn('[StopAll Uncharge]', e); onDone(); });
+    } else {
+      // No undock in progress, still count it as done
+      onDone();
+    }
+  }
+
+  // ── DOCKING UI HELPERS ──
+  window._undocking = false;
+  window._undockDelay = false;
+  window._isDocked = false;
+  window._isMoving = false;
+  window._lastNavDesc = '--';
+  window._baseHwEmergency = false;
+
+  function updateNavStatus(desc) {
+    if (desc !== undefined) window._lastNavDesc = desc;
+    var el = document.getElementById('navStatus');
+    // E-stop always takes highest priority
+    if (window._baseHwEmergency) {
+      el.textContent = 'EMERG. STOP';
+      el.style.color = 'var(--accent2)';
+      return;
+    }
+    // Active movement
+    if (window._isMoving) {
+      el.textContent = 'NAVIGATING';
+      el.style.color = 'var(--warn)';
+      return;
+    }
+    // Docked and idle = charging
+    var upper = String(window._lastNavDesc).toUpperCase();
+    if (window._isDocked && (upper === 'STANDBY' || upper === 'READY')) {
+      el.textContent = 'CHARGING';
+      el.style.color = 'var(--warn)';
+      return;
+    }
+    el.textContent = upper === 'EMERGENCY' ? 'EMERG. STOP' : window._lastNavDesc;
+    if (upper === 'READY' || upper === 'STANDBY') {
+      el.style.color = 'var(--success)';
+    } else if (upper === 'EMERGENCY' || upper === 'FAILURE') {
+      el.style.color = 'var(--accent2)';
+    } else {
+      el.style.color = 'var(--warn)';
+    }
+  }
+
+  function updateDockUI(docked) {
+    var badge = document.getElementById('dock-badge');
+    var undockBar = document.getElementById('undock-bar');
+    if (docked) {
+      badge.textContent = 'DOCKED';
+      badge.className = 'dock-status-badge docked';
+      undockBar.style.display = 'block';
+      if (!window._undocking && !window._undockDelay) setTeleopLocked(true);
+    } else {
+      badge.textContent = 'UNDOCKED';
+      badge.className = 'dock-status-badge undocked';
+      if (!window._undocking && !window._undockDelay) undockBar.style.display = 'none';
+      if (!window._undocking && !window._undockDelay) setTeleopLocked(false);
+    }
+  }
+
+  function setTeleopLocked(locked) {
+    var grid = document.getElementById('teleop-grid');
+    if (locked) grid.classList.add('locked');
+    else grid.classList.remove('locked');
+  }
+
+  function triggerUndock() {
+    if (!ros || !ros.isConnected) { showToast('Not connected to ROS'); return; }
+    var btn = document.getElementById('undock-btn');
+    btn.classList.add('running');
+    btn.disabled = true;
+    document.getElementById('undock-btn-label').textContent = 'UNDOCKING...';
+    window._undocking = true;
+    var svc = new ROSLIB.Service({
+      ros: ros,
+      name: '/robot/robot_local_control/NavigationComponent/UnchargeComponent/add',
+      serviceType: 'robot_local_control_msgs/UnchargePetition'
+    });
+    var req = new ROSLIB.ServiceRequest({
+      procedure: { charge_station: '' }
+    });
+    svc.callService(req, function(result) {
+      console.log('[Undock] service response:', JSON.stringify(result));
+      // Store the assigned procedure ID so we can cancel it if needed
+      if (result && result.state && result.state.header) {
+        window._undockProcedureId = result.state.header.id;
+        console.log('[Undock] procedure ID:', window._undockProcedureId);
+      }
+    }, function(err) {
+      console.error('[Undock] service error:', err);
+      window._undocking = false;
+      btn.classList.remove('running');
+      btn.disabled = false;
+      document.getElementById('undock-btn-label').textContent = 'UNDOCK TO ENABLE TELEOP';
+      showToast('Undock failed: ' + err);
+    });
+  }
+
+  // ── TELEOP ──
+  var teleopInterval = null;
+  function startMoving(linVel, angVel) {
+    if (teleopInterval) clearInterval(teleopInterval);
+    teleopInterval = setInterval(function() {
+      if (!cmdVelTopic) return;
+      cmdVelTopic.publish(new ROSLIB.Message({ linear:{x:linVel,y:0,z:0}, angular:{x:0,y:0,z:angVel} }));
+    }, 50);
+  }
+  function stopMoving() {
+    if (teleopInterval) clearInterval(teleopInterval);
+    teleopInterval = null;
+    if (cmdVelTopic) cmdVelTopic.publish(new ROSLIB.Message({ linear:{x:0,y:0,z:0}, angular:{x:0,y:0,z:0} }));
+  }
+  // Stop on mouseup anywhere on the page — ensures release is always caught
+  document.addEventListener('mouseup', stopMoving);
+  document.addEventListener('touchend', stopMoving);
+  var arrowKeysEnabled = false; // controlled by checkbox; off by default
+  var keysDown = {};
+  document.addEventListener('keydown', function(e) {
+    if (!arrowKeysEnabled) return;
+    if (document.getElementById('teleop-grid').classList.contains('locked')) return;
+    if (keysDown[e.key]) return; keysDown[e.key] = true;
+    if      (e.key==='ArrowUp')    startMoving(0.4,0);
+    else if (e.key==='ArrowDown')  startMoving(-0.4,0);
+    else if (e.key==='ArrowLeft')  startMoving(0,0.6);
+    else if (e.key==='ArrowRight') startMoving(0,-0.6);
+  });
+  document.addEventListener('keyup', function(e) {
+    if (!arrowKeysEnabled) return;
+    delete keysDown[e.key];
+    if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) stopMoving();
+  });
+
+  // ── RVIZ VNC (noVNC) ──
+  // noVNC is loaded as an ES module separately below
+  // connectVNC() is called from that module once RFB is available
+  window._vncRfb = null;
+
+  // ── WEBRTC CAMERAS ────────────────────────────────────────────────────────
+  async function connectCamera() {
+    var frontVideo  = document.getElementById('camera-front');
+    var topVideo    = document.getElementById('camera-top');
+    var frontStatus = document.getElementById('camera-front-status');
+    var topStatus   = document.getElementById('camera-top-status');
+
+    try {
+      var pc = new RTCPeerConnection({ iceServers: [] });
+      window._cameraPC = pc;
+
+      pc.addTransceiver('video', { direction: 'recvonly' }); // mid:0 thermal
+      pc.addTransceiver('video', { direction: 'recvonly' }); // mid:1 top ptz
+      pc.addTransceiver('video', { direction: 'recvonly' }); // mid:2 front
+      pc.addTransceiver('audio', { direction: 'sendrecv' }); // mid:3
+      pc.createDataChannel('data');                          // mid:4
+
+      var pendingTracks = new Map();
+
+      pc.ontrack = function(event) {
+        if (event.track.kind === 'video') {
+          pendingTracks.set(event.transceiver, event.track);
+          tryAttach();
+        }
+      };
+
+      function tryAttach() {
+        pc.getTransceivers().forEach(function(tc) {
+          if (!pendingTracks.has(tc)) return;
+          var track = pendingTracks.get(tc);
+          if (tc.mid === '2') {
+            frontVideo.srcObject = new MediaStream([track]);
+            frontStatus.textContent = 'LIVE';
+            frontStatus.style.color = 'var(--success)';
+            // update tab badge
+            var badge = document.getElementById('cam-tab-badge');
+            badge.textContent = 'LIVE'; badge.style.background = 'var(--success)'; badge.style.color = 'var(--bg)';
+          }
+          if (tc.mid === '1') {
+            topVideo.srcObject = new MediaStream([track]);
+            topStatus.textContent = 'LIVE';
+            topStatus.style.color = 'var(--success)';
+          }
+        });
+      }
+
+      pc.oniceconnectionstatechange = function() {
+        if (pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'disconnected') {
+          frontStatus.textContent = 'DISCONNECTED';
+          frontStatus.style.color = 'var(--accent2)';
+          topStatus.textContent   = 'DISCONNECTED';
+          topStatus.style.color   = 'var(--accent2)';
+        }
+      };
+
+      var offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+
+      var clientId = Math.random().toString(36).substring(2, 13);
+      var res = await fetch('https://192.168.0.200/webrtc/offer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          client_id: clientId, sdp: offer.sdp,
+          target_audio: '', target_video: 'all',
+          token: 'token', type: 'offer'
+        })
+      });
+
+      if (!res.ok) throw new Error('Offer failed: HTTP ' + res.status);
+      var answer = await res.json();
+      await pc.setRemoteDescription({ type: 'answer', sdp: answer.sdp });
+      tryAttach();
+
+    } catch(e) {
+      console.error('[Camera]', e);
+      document.getElementById('camera-front-status').textContent = 'ERROR: ' + e.message;
+      document.getElementById('camera-front-status').style.color = 'var(--accent2)';
+    }
+  }
+
+  connectCamera();
+
+  // ── TAB SWITCHING ──
+  function switchTab(name) {
+    document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('active'); });
+    document.querySelectorAll('.page-tab').forEach(function(t){ t.classList.remove('active'); });
+    document.getElementById('page-' + name).classList.add('active');
+    document.getElementById('tab-' + name).classList.add('active');
+    // update camera badge
+    var fs = document.getElementById('camera-front-status');
+    var badge = document.getElementById('cam-tab-badge');
+    if (fs && fs.textContent === 'LIVE') { badge.textContent = 'LIVE'; badge.style.background = 'var(--success)'; badge.style.color = 'var(--bg)'; }
+    else { badge.textContent = 'WebRTC'; badge.style.background = ''; badge.style.color = ''; }
+    // update detection badge
+    var detBadge = document.getElementById('det-tab-badge');
+    var detStatus = document.getElementById('det-badge');
+    if (detStatus && detStatus.textContent === 'LIVE') { detBadge.textContent = 'LIVE'; detBadge.style.background = 'var(--success)'; detBadge.style.color = 'var(--bg)'; }
+    else { detBadge.textContent = 'ROS'; detBadge.style.background = ''; detBadge.style.color = ''; }
+  }
+
+  // ── DETECTION IMAGE FEED ──
+  var _detSub = null;
+  var _testLoopTimer = null;
+  var _testImageData = null;
+
+  var DETECTION_TOPIC = '/robot/detections/image_annotated';
+
+  function initDetectionSubscriber(topic) {
+    if (_detSub) { try { _detSub.unsubscribe(); } catch(e) {} _detSub = null; }
+
+    DETECTION_TOPIC = topic || DETECTION_TOPIC;
+    document.getElementById('det-topic-display').textContent = DETECTION_TOPIC;
+
+    if (!ros || !ros.isConnected) return;
+
+    _detSub = new ROSLIB.Topic({
+      ros: ros,
+      name: DETECTION_TOPIC,
+      messageType: 'sensor_msgs/CompressedImage',
+      throttle_rate: 0,
+      queue_length: 1
+    });
+
+    _detSub.subscribe(function(msg) {
+      var img = document.getElementById('detection-img');
+      var placeholder = document.getElementById('det-placeholder');
+      var format = (msg.format || 'jpeg');
+
+      img.src = 'data:image/' + format + ';base64,' + msg.data;
+
+      if (placeholder.style.display !== 'none') {
+        placeholder.style.display = 'none';
+        img.style.display = 'block';
+      }
+
+      // Badge
+      var badge = document.getElementById('det-badge');
+      badge.textContent = 'LIVE';
+      badge.className = 'det-badge live';
+      document.getElementById('det-tab-badge').textContent = 'LIVE';
+      document.getElementById('det-tab-badge').style.background = 'var(--success)';
+      document.getElementById('det-tab-badge').style.color = 'var(--bg)';
+    });
+  }
+
+  function resubscribeDetection() {
+    var topic = document.getElementById('det-topic-input').value.trim();
+    if (!topic) { showToast('Enter a topic name'); return; }
+    // Reset display
+    document.getElementById('detection-img').style.display = 'none';
+    document.getElementById('det-placeholder').style.display = 'flex';
+    document.getElementById('det-topic-display').textContent = topic;
+    document.getElementById('det-badge').textContent = 'NO FEED';
+    document.getElementById('det-badge').className = 'det-badge';
+    initDetectionSubscriber(topic);
+    showToast('Subscribed to ' + topic);
+  }
+
+  // ── TEST PUBLISHER ──
+  function publishTestImage(input) {
+    var file = input.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      // Strip data URL prefix to get raw base64
+      var b64 = e.target.result.split(',')[1];
+      var format = file.type === 'image/png' ? 'png' : 'jpeg';
+      _testImageData = { b64: b64, format: format };
+      document.getElementById('test-img-label').textContent = '✓ ' + file.name;
+      document.getElementById('test-loop-btn').disabled = false;
+      document.getElementById('test-status').textContent = '';
+      // Publish once immediately
+      publishTestFrame();
+      showToast('Test image loaded — published once');
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function publishTestFrame() {
+    if (!_testImageData || !ros || !ros.isConnected) return;
+    var topic = new ROSLIB.Topic({
+      ros: ros,
+      name: document.getElementById('det-topic-input').value.trim() || DETECTION_TOPIC,
+      messageType: 'sensor_msgs/CompressedImage'
+    });
+    topic.publish(new ROSLIB.Message({
+      header: { seq: 0, stamp: { secs: 0, nsecs: 0 }, frame_id: 'camera' },
+      format: _testImageData.format,
+      data: _testImageData.b64
+    }));
+  }
+
+  function toggleTestLoop() {
+    var btn = document.getElementById('test-loop-btn');
+    var status = document.getElementById('test-status');
+    if (_testLoopTimer) {
+      clearInterval(_testLoopTimer);
+      _testLoopTimer = null;
+      btn.textContent = 'LOOP TEST IMAGE';
+      btn.style.borderColor = '';
+      btn.style.color = '';
+      status.textContent = '';
+    } else {
+      if (!_testImageData) { showToast('Load an image first'); return; }
+      _testLoopTimer = setInterval(publishTestFrame, 200); // ~5fps loop
+      btn.textContent = 'STOP LOOP';
+      btn.style.borderColor = 'var(--accent2)';
+      btn.style.color = 'var(--accent2)';
+      status.textContent = 'Publishing at ~5 fps...';
+    }
+  }
+
+  // ── CLOCK + TOAST ──
+  setInterval(function() { document.getElementById('sb-time').textContent = new Date().toLocaleTimeString(); }, 1000);
+  var toastTimer = null;
+  function showToast(msg) {
+    var t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(function() { t.classList.remove('show'); }, 2500);
+  }
+</script>
+
+<script type="module">
+(async function() {
+  let RFB;
+  try {
+    const mod = await import('https://cdn.jsdelivr.net/npm/@novnc/novnc@1.4.0/core/rfb.js');
+    RFB = mod.default;
+  } catch(importErr) {
+    console.error('[VNC] noVNC import failed:', importErr);
+    document.getElementById('vnc-status-text').textContent = 'noVNC LOAD ERROR';
+    document.getElementById('vnc-spinner').style.display   = 'none';
+    document.getElementById('vnc-reconnect').style.display = 'inline-block';
+    return;
+  }
+  const VNC_URL = 'wss://192.168.0.200/rviz_web';
+  const VNC_PASSWORD = 'RXN82ybVZbMsyriB';
+  const container  = document.getElementById('rviz-container');
+  const overlay    = document.getElementById('vnc-overlay');
+  const statusText = document.getElementById('vnc-status-text');
+  const spinner    = document.getElementById('vnc-spinner');
+  const reconnBtn  = document.getElementById('vnc-reconnect');
+  function vncLog(msg, level) { console[level || 'log']('[VNC]', msg); statusText.textContent = msg; }
+  function setVncStatus(msg, showSpinner, showReconnect) {
+    vncLog(msg);
+    spinner.style.display   = showSpinner   ? 'block' : 'none';
+    reconnBtn.style.display = showReconnect ? 'inline-block' : 'none';
+    overlay.classList.remove('hidden');
+  }
+  function probeWebSocket() {
+    return new Promise((resolve) => {
+      let ws;
+      try { ws = new WebSocket(VNC_URL); ws.binaryType = 'arraybuffer'; }
+      catch(e) { resolve({ ok: false, reason: e.message }); return; }
+      const timer = setTimeout(() => { ws.close(); resolve({ ok: false, reason: 'Timed out' }); }, 10000);
+      ws.onopen  = () => { clearTimeout(timer); ws.close(1000, 'probe done'); resolve({ ok: true }); };
+      ws.onerror = () => { clearTimeout(timer); resolve({ ok: false, reason: 'WebSocket error' }); };
+      ws.onclose = (e) => { clearTimeout(timer); if (e.code !== 1000) resolve({ ok: false, reason: 'Closed early code ' + e.code }); };
+    });
+  }
+  window.connectVNC = async function connectVNC() {
+    if (window._vncRfb) { try { window._vncRfb.disconnect(); } catch(_) {} window._vncRfb = null; }
+    setVncStatus('PROBING WebSocket...', true, false);
+    const probe = await probeWebSocket();
+    if (!probe.ok) {
+      setVncStatus('WS PROBE FAILED: ' + probe.reason, false, true);
+      document.getElementById('sb-map').textContent = 'WS FAILED';
+      document.getElementById('sb-map').style.color = 'var(--accent2)';
+      return;
+    }
+    setVncStatus('WebSocket OK - starting RFB handshake...', true, false);
+    let rfb;
+    try { rfb = new RFB(container, VNC_URL, { credentials: { password: VNC_PASSWORD } }); }
+    catch(e) { setVncStatus('RFB error: ' + e.message, false, true); return; }
+    rfb.viewOnly = false; rfb.scaleViewport = true; rfb.clipViewport = true;
+    rfb.resizeSession = true; rfb.background = '#060910';
+    rfb.addEventListener('connect', () => {
+      vncLog('RFB connected'); overlay.classList.add('hidden');
+      document.getElementById('sb-map').textContent = 'VNC LIVE';
+      document.getElementById('sb-map').style.color = 'var(--success)';
+      if (window._vncResizeTimer) clearInterval(window._vncResizeTimer);
+      var ticks = 0;
+      window._vncResizeTimer = setInterval(function() {
+        forceVncResize();
+        ticks++;
+        if (ticks >= 30) {
+          clearInterval(window._vncResizeTimer);
+          window._vncResizeTimer = setInterval(forceVncResize, 3000);
+        }
+      }, 500);
+    });
+    rfb.addEventListener('disconnect', (e) => {
+      const d = e.detail || {};
+      if (window._vncResizeTimer) { clearInterval(window._vncResizeTimer); window._vncResizeTimer = null; }
+      setVncStatus(d.clean ? 'VNC DISCONNECTED' : 'VNC LOST: ' + (d.reason || 'unexpected'), false, true);
+      document.getElementById('sb-map').textContent = 'VNC LOST';
+      document.getElementById('sb-map').style.color = 'var(--accent2)';
+    });
+    rfb.addEventListener('credentialsrequired', () => { rfb.sendCredentials({ password: VNC_PASSWORD }); });
+    rfb.addEventListener('securityfailure', (e) => {
+      setVncStatus('VNC AUTH FAILED: ' + ((e.detail && e.detail.reason) || 'unknown'), false, true);
+    });
+    window._vncRfb = rfb;
+  };
+  connectVNC();
+})();
+</script>
 </body>
 </html><!DOCTYPE html>
 <html lang="en">
