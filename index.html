@@ -127,8 +127,8 @@
     .page-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
     .page-tab .tab-dot{width:7px;height:7px;border-radius:50%;background:var(--muted);transition:background .2s}
     .page-tab.active .tab-dot{background:var(--accent);box-shadow:0 0 6px var(--accent)}
-    .tab-cam-badge{font-family:var(--font-mono);font-size:9px;color:var(--bg);background:var(--muted);padding:1px 5px;border-radius:2px;margin-left:4px;transition:background .2s}
-    .page-tab.active .tab-cam-badge{background:var(--accent)}
+    .tab-cam-badge{font-family:var(--font-mono);font-size:9px;color:var(--bg);background:var(--muted);padding:1px 5px;border-radius:2px;margin-left:4px;transition:background .2s;display:none}
+    .tab-cam-badge.live{display:inline}
 
     /* page visibility */
     .page{display:none}
@@ -988,13 +988,13 @@
     // update camera badge
     var fs = document.getElementById('camera-front-status');
     var badge = document.getElementById('cam-tab-badge');
-    if (fs && fs.textContent === 'LIVE') { badge.textContent = 'LIVE'; badge.style.background = 'var(--success)'; badge.style.color = 'var(--bg)'; }
-    else { badge.textContent = ''; badge.style.background = ''; badge.style.color = ''; }
+    if (fs && fs.textContent === 'LIVE') { badge.textContent = 'LIVE'; badge.className = 'tab-cam-badge live'; badge.style.background = 'var(--success)'; badge.style.color = 'var(--bg)'; }
+    else { badge.textContent = ''; badge.className = 'tab-cam-badge'; badge.style.background = ''; badge.style.color = ''; }
     // update detection badge
     var detBadge = document.getElementById('det-tab-badge');
     var detStatus = document.getElementById('det-badge');
-    if (detStatus && detStatus.textContent === 'LIVE') { detBadge.textContent = 'LIVE'; detBadge.style.background = 'var(--success)'; detBadge.style.color = 'var(--bg)'; }
-    else { detBadge.textContent = ''; detBadge.style.background = ''; detBadge.style.color = ''; }
+    if (detStatus && detStatus.textContent === 'LIVE') { detBadge.textContent = 'LIVE'; detBadge.className = 'tab-cam-badge live'; detBadge.style.background = 'var(--success)'; detBadge.style.color = 'var(--bg)'; }
+    else { detBadge.textContent = ''; detBadge.className = 'tab-cam-badge'; detBadge.style.background = ''; detBadge.style.color = ''; }
   }
 
   // ── DETECTION IMAGE FEED ──
@@ -1037,6 +1037,7 @@
       badge.textContent = 'LIVE';
       badge.className = 'det-badge live';
       document.getElementById('det-tab-badge').textContent = 'LIVE';
+      document.getElementById('det-tab-badge').className = 'tab-cam-badge live';
       document.getElementById('det-tab-badge').style.background = 'var(--success)';
       document.getElementById('det-tab-badge').style.color = 'var(--bg)';
     });
