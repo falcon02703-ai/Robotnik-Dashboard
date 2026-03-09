@@ -345,7 +345,6 @@
       <div class="panel-header">
         <span class="panel-title">Detected Image Feed</span>
         <div style="display:flex;align-items:center;gap:8px">
-          <span class="det-fps" id="det-fps">-- fps</span>
           <span class="det-badge" id="det-badge">NO FEED</span>
           <span class="panel-badge">sensor_msgs/CompressedImage</span>
         </div>
@@ -359,10 +358,6 @@
         </div>
         <!-- Image shown once feed is live (hidden initially) -->
         <img id="detection-img" alt="Detection feed" style="display:none">
-        <div class="detection-status-row">
-          <span id="det-last-msg" style="font-family:var(--font-mono);font-size:10px;color:var(--muted)">Last message: --</span>
-          <span id="det-msg-count" style="font-family:var(--font-mono);font-size:10px;color:var(--muted)">Frames: 0</span>
-        </div>
       </div>
     </div>
 
@@ -1002,19 +997,13 @@
 
   // ── DETECTION IMAGE FEED ──
   var _detSub = null;
-  var _detFrameCount = 0;
-  var _detLastFrameTime = null;
-  var _detFpsFrames = 0;
-  var _detFpsTimer = null;
   var _testLoopTimer = null;
   var _testImageData = null;
 
   var DETECTION_TOPIC = '/robot/detections/image_annotated';
 
   function initDetectionSubscriber(topic) {
-    // Unsubscribe from previous topic if any
     if (_detSub) { try { _detSub.unsubscribe(); } catch(e) {} _detSub = null; }
-    clearInterval(_detFpsTimer);
 
     DETECTION_TOPIC = topic || DETECTION_TOPIC;
     document.getElementById('det-topic-display').textContent = DETECTION_TOPIC;
@@ -1025,15 +1014,14 @@
       ros: ros,
       name: DETECTION_TOPIC,
       messageType: 'sensor_msgs/CompressedImage',
-      throttle_rate: 0,    // no throttling — show every frame
-      queue_length: 1      // only keep latest frame
+      throttle_rate: 0,
+      queue_length: 1
     });
 
     _detSub.subscribe(function(msg) {
-      // msg.data is base64-encoded image bytes
       var img = document.getElementById('detection-img');
       var placeholder = document.getElementById('det-placeholder');
-      var format = (msg.format || 'jpeg').replace('jpeg', 'jpeg').replace('png', 'png');
+      var format = (msg.format || 'jpeg');
 
       img.src = 'data:image/' + format + ';base64,' + msg.data;
 
@@ -1041,13 +1029,6 @@
         placeholder.style.display = 'none';
         img.style.display = 'block';
       }
-
-      // Update status
-      _detFrameCount++;
-      _detLastFrameTime = new Date();
-      _detFpsFrames++;
-      document.getElementById('det-msg-count').textContent = 'Frames: ' + _detFrameCount;
-      document.getElementById('det-last-msg').textContent = 'Last: ' + _detLastFrameTime.toLocaleTimeString();
 
       // Badge
       var badge = document.getElementById('det-badge');
@@ -1057,34 +1038,17 @@
       document.getElementById('det-tab-badge').style.background = 'var(--success)';
       document.getElementById('det-tab-badge').style.color = 'var(--bg)';
     });
-
-    // FPS counter — calculated over 2-second windows
-    _detFpsTimer = setInterval(function() {
-      document.getElementById('det-fps').textContent = (_detFpsFrames / 2).toFixed(1) + ' fps';
-      _detFpsFrames = 0;
-      // If no frames in last 3 seconds, mark as stale
-      if (_detLastFrameTime && (new Date() - _detLastFrameTime) > 3000) {
-        var badge = document.getElementById('det-badge');
-        badge.textContent = 'STALE';
-        badge.className = 'det-badge error';
-      }
-    }, 2000);
   }
 
   function resubscribeDetection() {
     var topic = document.getElementById('det-topic-input').value.trim();
     if (!topic) { showToast('Enter a topic name'); return; }
     // Reset display
-    _detFrameCount = 0;
-    _detLastFrameTime = null;
     document.getElementById('detection-img').style.display = 'none';
     document.getElementById('det-placeholder').style.display = 'flex';
     document.getElementById('det-topic-display').textContent = topic;
     document.getElementById('det-badge').textContent = 'NO FEED';
     document.getElementById('det-badge').className = 'det-badge';
-    document.getElementById('det-fps').textContent = '-- fps';
-    document.getElementById('det-msg-count').textContent = 'Frames: 0';
-    document.getElementById('det-last-msg').textContent = 'Last message: --';
     initDetectionSubscriber(topic);
     showToast('Subscribed to ' + topic);
   }
