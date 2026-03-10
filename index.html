@@ -1422,9 +1422,9 @@
   function renderIntrusionHistory() {
     var body = document.getElementById('intr-history-body');
     var empty = document.getElementById('intr-empty');
+    body.querySelectorAll('.intrusion-event-card').forEach(function(c) { c.remove(); });
     if (_intrHistory.length === 0) { empty.style.display = 'block'; return; }
     empty.style.display = 'none';
-    body.querySelectorAll('.intrusion-event-card').forEach(function(c) { c.remove(); });
     _intrHistory.forEach(function(ev) {
       var card = document.createElement('div');
       card.className = 'intrusion-event-card';
