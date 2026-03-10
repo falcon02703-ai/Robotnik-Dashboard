@@ -14,7 +14,7 @@
       --font-mono:'Share Tech Mono',monospace;--font-ui:'Rajdhani',sans-serif;
     }
     *{box-sizing:border-box;margin:0;padding:0}
-    body{background:var(--bg);color:var(--text);font-family:var(--font-ui);overflow:hidden;height:100vh}
+    body{background:var(--bg);color:var(--text);font-family:var(--font-ui);min-height:100vh}
     body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,229,255,.015) 2px,rgba(0,229,255,.015) 4px);pointer-events:none;z-index:9999}
     header{display:flex;align-items:center;justify-content:space-between;padding:14px 28px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
     .logo{display:flex;align-items:center;gap:12px}
@@ -29,14 +29,14 @@
     #conn-dot.connected{background:var(--success);animation:pulse 2s infinite}
     #conn-dot.error{background:var(--accent2)}
     @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(0,255,136,.4)}50%{box-shadow:0 0 0 6px rgba(0,255,136,0)}}
-    .main-grid{display:grid;grid-template-columns:1fr 408px;gap:16px;padding:16px 28px 38px}
+    .main-grid{display:grid;grid-template-columns:1fr 420px;gap:16px;padding:16px 28px}
     .panel{background:var(--surface);border:1px solid var(--border);border-radius:4px}
     .panel-header{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--border);background:rgba(0,229,255,.04);border-radius:4px 4px 0 0}
     .panel-title{font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--accent)}
     .panel-badge{font-family:var(--font-mono);font-size:10px;color:var(--muted);background:rgba(255,255,255,.05);padding:2px 8px;border-radius:2px}
     .map-panel{grid-column:1;overflow:hidden;border-radius:4px}
     /* header≈65 + tabs≈40 + panel-header≈41 + map-controls≈44 + status-bar≈38 + grid padding+gap≈36 = ~264px */
-    #rviz-container{width:100%;height:calc(100vh - 244px);min-height:400px;max-height:none;background:#060910;display:block;position:relative;overflow:hidden;contain:strict}
+    #rviz-container{width:100%;height:calc(100vh - 264px);min-height:400px;max-height:none;background:#060910;display:block;position:relative;overflow:hidden;contain:strict}
     #rviz-container > div{position:absolute!important;top:0!important;left:0!important;width:100%!important;height:100%!important;margin:0!important;overflow:hidden!important}
     #rviz-container canvas{display:block;width:100%!important;height:100%!important;margin:0!important;object-fit:contain!important;max-height:100%!important}
     #vnc-overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:rgba(6,9,16,.85);font-family:var(--font-mono);color:var(--muted);font-size:12px;z-index:10;transition:opacity .4s}
@@ -55,8 +55,10 @@
     .btn-nav-cancel:hover{background:var(--accent2);color:var(--bg)}
     .btn-nav-cancel.cancelled{border-color:var(--success);color:var(--success)}
     .btn-nav-cancel:disabled{opacity:.4;cursor:not-allowed}
-    .right-col{grid-column:2;display:flex;flex-direction:column;gap:16px;align-self:start;max-height:calc(100vh - 163px);overflow-y:auto;overflow-x:hidden;padding-bottom:4px;scrollbar-width:none}
-    .right-col::-webkit-scrollbar{display:none}
+    .right-col{grid-column:2;display:flex;flex-direction:column;gap:16px;align-self:start;max-height:calc(100vh - 195px);overflow-y:auto;padding-bottom:4px;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+    .right-col::-webkit-scrollbar{width:4px}
+    .right-col::-webkit-scrollbar-track{background:transparent}
+    .right-col::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
     .pose-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border)}
     .pose-cell{background:var(--surface);padding:10px 14px}
     .pose-label{font-family:var(--font-mono);font-size:10px;color:var(--muted);letter-spacing:1px;margin-bottom:4px}
@@ -113,7 +115,7 @@
     .btn-secondary{font-family:var(--font-ui);font-weight:700;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;padding:8px 14px;background:transparent;border:1px solid var(--accent2);color:var(--accent2);cursor:pointer;border-radius:2px;transition:all .15s;white-space:nowrap}
     .btn-secondary:hover{background:var(--accent2);color:var(--bg)}
     #ext-ws-log{margin:0 16px 12px;font-family:var(--font-mono);font-size:11px;color:var(--muted);background:var(--bg);border:1px solid var(--border);padding:8px;max-height:80px;overflow-y:auto;border-radius:2px}
-    .status-bar{display:flex;gap:24px;padding:8px 28px;background:var(--surface);border-top:1px solid var(--border);font-family:var(--font-mono);font-size:11px;color:var(--muted);position:fixed;bottom:0;left:0;right:0;z-index:80}
+    .status-bar{display:flex;gap:24px;padding:8px 28px;background:var(--surface);border-top:1px solid var(--border);font-family:var(--font-mono);font-size:11px;color:var(--muted);position:relative}
     .status-bar span{display:flex;align-items:center;gap:6px}
     #toast{position:fixed;bottom:60px;right:28px;background:var(--success);color:var(--bg);font-family:var(--font-mono);font-size:12px;padding:10px 18px;border-radius:3px;opacity:0;transform:translateY(10px);transition:all .25s;pointer-events:none;z-index:200}
     #toast.show{opacity:1;transform:translateY(0)}
@@ -138,61 +140,59 @@
     .cam-full-panel .panel-header{margin:-12px -16px 12px;padding:10px 16px;border-bottom:1px solid var(--border);background:rgba(0,229,255,.04);display:flex;align-items:center;justify-content:space-between}
 
     /* ── DETECTION PAGE ── */
-    .detection-page-inner{padding:16px 28px 54px;display:grid;grid-template-columns:1fr 340px;gap:16px;align-items:start;max-height:calc(100vh - 105px);overflow:hidden}
+    .detection-page-inner{padding:16px 28px;display:grid;grid-template-columns:1fr 340px;gap:16px;align-items:start}
     .detection-feed-panel{background:var(--surface);border:1px solid var(--border);border-radius:4px}
     .detection-feed-panel .panel-header{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--border);background:rgba(0,229,255,.04);border-radius:4px 4px 0 0}
     .detection-img-wrap{padding:12px 16px;display:flex;flex-direction:column;gap:8px}
-    #detection-img{width:100%;display:block;border:1px solid var(--border);background:#000;border-radius:2px;max-height:calc(100vh - 260px);object-fit:contain}
+    #detection-img{width:100%;display:block;border:1px solid var(--border);background:#000;border-radius:2px;min-height:300px;object-fit:contain}
     .detection-placeholder{width:100%;min-height:300px;background:#060910;border:1px solid var(--border);border-radius:2px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--muted);font-family:var(--font-mono);font-size:11px;letter-spacing:1px}
     .detection-placeholder-icon{font-size:36px;opacity:.3}
     .detection-status-row{display:flex;align-items:center;justify-content:space-between;font-family:var(--font-mono);font-size:10px;color:var(--muted);padding:2px 0}
     /* right sidebar */
-    .detection-sidebar{display:flex;flex-direction:column;gap:16px;max-height:calc(100vh - 163px);overflow-y:auto;overflow-x:hidden;scrollbar-width:none}
-    .detection-sidebar::-webkit-scrollbar{display:none}
+    .detection-sidebar{display:flex;flex-direction:column;gap:16px}
     .det-topic-form{padding:12px 16px;display:flex;flex-direction:column;gap:8px}
     .det-topic-form input{background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:var(--font-mono);font-size:12px;padding:7px 10px;border-radius:2px;width:100%}
     .det-topic-form input:focus{outline:none;border-color:var(--accent)}
     .det-topic-form label{font-family:var(--font-mono);font-size:10px;color:var(--muted);letter-spacing:1px}
+    /* test panel */
+    .test-panel-body{padding:12px 16px;display:flex;flex-direction:column;gap:10px}
+    .test-panel-body p{font-family:var(--font-mono);font-size:10px;color:var(--muted);line-height:1.6;letter-spacing:.5px}
+    .file-drop-zone{border:1px dashed var(--border);border-radius:2px;padding:16px;text-align:center;font-family:var(--font-mono);font-size:10px;color:var(--muted);cursor:pointer;transition:all .15s;background:var(--bg)}
+    .file-drop-zone:hover{border-color:var(--accent);color:var(--accent)}
+    .file-drop-zone input{display:none}
     .det-fps{font-family:var(--font-mono);font-size:10px;color:var(--muted);letter-spacing:1px}
     .det-badge{font-family:var(--font-mono);font-size:10px;padding:2px 8px;border-radius:2px;background:rgba(255,255,255,.05);color:var(--muted);transition:all .3s}
     .det-badge.live{color:var(--success);background:rgba(0,255,136,.08);animation:pulse 2s infinite}
     .det-badge.error{color:var(--accent2);background:rgba(255,107,53,.1)}
-    /* ── DETECTION ALERT INDICATOR ── */
-    .det-alert-panel-body{padding:14px 16px;display:flex;flex-direction:column;gap:12px}
-    .det-alert-indicator{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:18px 12px;border-radius:3px;border:1px solid var(--border);background:rgba(0,255,136,.06);transition:all .35s;cursor:default;min-height:90px}
-    .det-alert-indicator.clear{border-color:rgba(0,255,136,.35);background:rgba(0,255,136,.06)}
-    .det-alert-indicator.detected{border-color:rgba(255,107,53,.6);background:rgba(255,107,53,.1);animation:det-alert-pulse 1s infinite}
-    .det-alert-indicator.no-topic{border-color:var(--border);background:rgba(255,255,255,.02)}
-    @keyframes det-alert-pulse{0%,100%{box-shadow:0 0 0 0 rgba(255,107,53,.5)}50%{box-shadow:0 0 14px 4px rgba(255,107,53,.15)}}
-    .det-alert-dot{width:20px;height:20px;border-radius:50%;background:var(--muted);transition:background .3s,box-shadow .3s;flex-shrink:0}
-    .det-alert-indicator.clear   .det-alert-dot{background:var(--success);box-shadow:0 0 8px rgba(0,255,136,.6)}
-    .det-alert-indicator.detected .det-alert-dot{background:var(--accent2);box-shadow:0 0 10px rgba(255,107,53,.8);animation:det-dot-throb .8s infinite}
-    @keyframes det-dot-throb{0%,100%{transform:scale(1)}50%{transform:scale(1.25)}}
-    .det-alert-state{font-family:var(--font-mono);font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);transition:color .3s;text-align:center}
-    .det-alert-indicator.clear    .det-alert-state{color:var(--success)}
-    .det-alert-indicator.detected .det-alert-state{color:var(--accent2)}
-    .det-alert-label{font-family:var(--font-mono);font-size:11px;color:var(--muted);letter-spacing:1px;text-align:center;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;transition:color .3s;min-height:14px}
-    .det-alert-indicator.detected .det-alert-label{color:var(--warn)}
-    .det-alert-meta{display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:10px;color:var(--muted);letter-spacing:.5px}
-    .det-alert-topic-form{display:flex;flex-direction:column;gap:6px}
-    .det-alert-topic-form label{font-family:var(--font-mono);font-size:10px;color:var(--muted);letter-spacing:1px}
-    .det-alert-topic-form input{background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:var(--font-mono);font-size:12px;padding:6px 10px;border-radius:2px;width:100%}
-    .det-alert-topic-form input:focus{outline:none;border-color:var(--accent)}
-    .det-clear-timer-row{display:flex;align-items:center;gap:8px;font-family:var(--font-mono);font-size:10px;color:var(--muted)}
-    .det-clear-timer-row input[type=number]{width:54px;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:var(--font-mono);font-size:12px;padding:4px 6px;border-radius:2px;text-align:center}
-    .det-clear-timer-row input[type=number]:focus{outline:none;border-color:var(--accent)}
-    /* ── PAST DETECTIONS ── */
-    .det-history-section{display:flex;flex-direction:column;gap:6px}
-    .det-history-title{font-family:var(--font-mono);font-size:10px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;display:flex;align-items:center;justify-content:space-between}
-    .det-history-clear{font-family:var(--font-mono);font-size:10px;color:var(--muted);background:none;border:none;cursor:pointer;padding:0;letter-spacing:1px;text-transform:uppercase}
-    .det-history-clear:hover{color:var(--accent2)}
-    .det-history-list{display:flex;flex-direction:column;gap:4px}
-    .det-history-item{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:2px;border:1px solid var(--border);background:rgba(255,107,53,.05);animation:det-history-fade .3s ease}
-    @keyframes det-history-fade{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
-    .det-history-dot{width:7px;height:7px;border-radius:50%;background:var(--accent2);flex-shrink:0}
-    .det-history-label{font-family:var(--font-mono);font-size:11px;color:var(--warn);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-    .det-history-time{font-family:var(--font-mono);font-size:10px;color:var(--muted);flex-shrink:0}
-    .det-history-empty{font-family:var(--font-mono);font-size:10px;color:var(--muted);letter-spacing:1px;text-align:center;padding:8px 0}
+    /* ── INTRUSION PAGE ── */
+    .intrusion-page-inner{padding:16px 28px 54px;display:grid;grid-template-columns:1fr 340px;gap:16px;align-items:start;overflow:hidden}
+    .intrusion-main{display:flex;flex-direction:column;gap:16px}
+    .intrusion-alert-panel{background:var(--surface);border:1px solid var(--border);border-radius:4px;transition:border-color .3s,box-shadow .3s}
+    .intrusion-alert-panel.alarmed{border-color:var(--accent2);box-shadow:0 0 18px rgba(255,107,53,.25)}
+    .intrusion-alert-panel .panel-header{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--border);background:rgba(0,229,255,.04);border-radius:4px 4px 0 0}
+    .intrusion-alert-body{padding:24px 20px;display:flex;flex-direction:column;align-items:center;gap:16px}
+    .intrusion-state-badge{font-family:var(--font-mono);font-size:13px;font-weight:700;letter-spacing:2px;padding:8px 28px;border-radius:3px;background:rgba(255,255,255,.04);color:var(--muted);border:1px solid var(--border);transition:all .3s}
+    .intrusion-state-badge.alarmed{background:rgba(255,107,53,.12);color:var(--accent2);border-color:var(--accent2);animation:pulse 1.2s infinite}
+    .intrusion-state-badge.clear{background:rgba(0,255,136,.08);color:var(--success);border-color:var(--success)}
+    .intrusion-label{font-family:var(--font-mono);font-size:22px;font-weight:700;letter-spacing:2px;color:var(--text);min-height:32px;text-align:center}
+    .intrusion-label.alarmed{color:var(--accent2)}
+    .intrusion-meta-row{display:flex;gap:28px;font-family:var(--font-mono);font-size:10px;color:var(--muted);letter-spacing:1px}
+    .intrusion-meta-row span b{color:var(--text)}
+    .intrusion-history-panel{background:var(--surface);border:1px solid var(--border);border-radius:4px}
+    .intrusion-history-panel .panel-header{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--border);background:rgba(0,229,255,.04);border-radius:4px 4px 0 0}
+    .intrusion-history-body{padding:10px 14px;display:flex;flex-direction:column;gap:8px}
+    .intrusion-event-card{background:var(--bg);border:1px solid var(--border);border-radius:3px;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;font-family:var(--font-mono);font-size:11px}
+    .intrusion-event-card .ev-label{color:var(--accent2);font-weight:700;letter-spacing:1px}
+    .intrusion-event-card .ev-time{color:var(--muted);font-size:10px}
+    .intrusion-empty{font-family:var(--font-mono);font-size:11px;color:var(--muted);text-align:center;padding:18px 0;letter-spacing:1px}
+    .intrusion-sidebar{display:flex;flex-direction:column;gap:16px}
+    .intr-topic-form{padding:12px 16px;display:flex;flex-direction:column;gap:8px}
+    .intr-topic-form input{background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:var(--font-mono);font-size:12px;padding:7px 10px;border-radius:2px;width:100%}
+    .intr-topic-form input:focus{outline:none;border-color:var(--accent)}
+    .intr-topic-form label{font-family:var(--font-mono);font-size:10px;color:var(--muted);letter-spacing:1px}
+    .intr-badge{font-family:var(--font-mono);font-size:10px;padding:2px 8px;border-radius:2px;background:rgba(255,255,255,.05);color:var(--muted);transition:all .3s}
+    .intr-badge.alarmed{color:var(--accent2);background:rgba(255,107,53,.1);animation:pulse 1.2s infinite}
+    .intr-badge.clear{color:var(--success);background:rgba(0,255,136,.08)}
   </style>
 </head>
 <body>
@@ -223,6 +223,10 @@
   <button class="page-tab" id="tab-det" onclick="switchTab('det')">
     <span class="tab-dot"></span> Detections
     <span class="tab-cam-badge" id="det-tab-badge"></span>
+  </button>
+  <button class="page-tab" id="tab-intr" onclick="switchTab('intr')">
+    <span class="tab-dot"></span> Intrusion
+    <span class="tab-cam-badge" id="intr-tab-badge"></span>
   </button>
 </div>
 
@@ -369,95 +373,34 @@
 <div class="page" id="page-det">
   <div class="detection-page-inner">
 
-    <!-- LEFT COLUMN: feed + history -->
-    <div style="display:flex;flex-direction:column;gap:16px">
-
-      <!-- MAIN FEED -->
-      <div class="detection-feed-panel">
-        <div class="panel-header">
-          <span class="panel-title">Detected Image Feed</span>
-          <div style="display:flex;align-items:center;gap:8px">
-            <span class="det-badge" id="det-badge">NO FEED</span>
-            <span class="panel-badge">sensor_msgs/CompressedImage</span>
-          </div>
-        </div>
-        <div class="detection-img-wrap">
-          <div class="detection-placeholder" id="det-placeholder">
-            <span class="detection-placeholder-icon">🔍</span>
-            <span>AWAITING DETECTION FEED</span>
-            <span style="color:var(--border);font-size:10px" id="det-topic-display">/robot/detections/image_annotated</span>
-          </div>
-          <img id="detection-img" alt="Detection feed" style="display:none">
+    <!-- MAIN FEED -->
+    <div class="detection-feed-panel">
+      <div class="panel-header">
+        <span class="panel-title">Detected Image Feed</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="det-badge" id="det-badge">NO FEED</span>
+          <span class="panel-badge">sensor_msgs/CompressedImage</span>
         </div>
       </div>
-
-      <!-- PAST DETECTIONS -->
-      <div class="panel">
-        <div class="panel-header">
-          <span class="panel-title">Past Detections</span>
-          <div style="display:flex;align-items:center;gap:8px">
-            <span id="det-alert-count" class="panel-badge">Count: 0</span>
-            <button class="btn-nav-cancel" onclick="clearDetectionHistory()">CLEAR</button>
-          </div>
+      <div class="detection-img-wrap">
+        <!-- Placeholder shown until first image arrives -->
+        <div class="detection-placeholder" id="det-placeholder">
+          <span class="detection-placeholder-icon">🔍</span>
+          <span>AWAITING DETECTION FEED</span>
+          <span style="color:var(--border);font-size:10px" id="det-topic-display">/robot/detections/image_annotated</span>
         </div>
-        <div style="padding:12px 16px;display:flex;flex-direction:column;gap:6px">
-          <div class="det-history-list" id="det-history-list">
-            <div class="det-history-empty" id="det-history-empty">NO DETECTIONS YET</div>
-          </div>
-        </div>
+        <!-- Image shown once feed is live (hidden initially) -->
+        <img id="detection-img" alt="Detection feed" style="display:none">
       </div>
-
-    </div><!-- /left column -->
+    </div>
 
     <!-- SIDEBAR -->
     <div class="detection-sidebar">
 
-      <!-- DETECTION ALERT INDICATOR -->
-      <div class="panel">
-        <div class="panel-header">
-          <span class="panel-title">Detection Alert</span>
-          <div style="display:flex;align-items:center;gap:8px">
-            <span class="det-badge" id="alert-feed-badge">NO TOPIC</span>
-            <span class="panel-badge">std_msgs/String</span>
-          </div>
-        </div>
-        <div class="det-alert-panel-body">
-
-          <!-- Big status indicator -->
-          <div class="det-alert-indicator no-topic" id="det-alert-indicator">
-            <div class="det-alert-dot" id="det-alert-dot"></div>
-            <div class="det-alert-state" id="det-alert-state">NO TOPIC</div>
-            <div class="det-alert-label" id="det-alert-label"></div>
-          </div>
-
-          <div class="det-alert-meta">
-            <span id="det-alert-last-seen">Last detection: --</span>
-          </div>
-
-          <!-- Alert topic config -->
-          <div class="det-alert-topic-form">
-            <label>ALERT TOPIC (std_msgs/String)</label>
-            <input id="det-alert-topic-input" type="text" value="/robot/detections/alert" placeholder="/robot/detections/alert">
-            <button class="btn-primary" style="margin-top:4px" onclick="applyAlertTopic()">APPLY ALERT TOPIC</button>
-          </div>
-
-          <!-- Auto-clear timer -->
-          <div class="det-clear-timer-row">
-            <label for="det-clear-secs">AUTO-CLEAR AFTER</label>
-            <input type="number" id="det-clear-secs" value="5" min="1" max="60">
-            <span>seconds of no new message</span>
-          </div>
-
-          <p style="font-family:var(--font-mono);font-size:10px;color:var(--muted);line-height:1.6">
-            AI script publishes the detected label (e.g. <span style="color:var(--warn)">"Person"</span>) to trigger RED alert, or an empty string <span style="color:var(--muted)">&nbsp;""&nbsp;</span> to explicitly clear.
-          </p>
-        </div>
-      </div>
-
       <!-- TOPIC CONFIG -->
       <div class="panel">
         <div class="panel-header">
-          <span class="panel-title">Image Topic Config</span>
+          <span class="panel-title">Topic Config</span>
           <span class="panel-badge">ROSBridge</span>
         </div>
         <div class="det-topic-form">
@@ -466,6 +409,101 @@
           <button class="btn-primary" style="margin-top:4px" onclick="resubscribeDetection()">APPLY TOPIC</button>
           <p style="font-family:var(--font-mono);font-size:10px;color:var(--muted);line-height:1.6;margin-top:4px">
             Change this to match the topic published by the AI detection script. Supports sensor_msgs/CompressedImage.
+          </p>
+        </div>
+      </div>
+
+      <!-- TEST PANEL -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Feed Test</span>
+          <span class="panel-badge">Pre-AI testing</span>
+        </div>
+        <div class="test-panel-body">
+          <p>Publish a local image to the detection topic to verify the pipeline before the AI script is available.</p>
+          <div class="file-drop-zone" onclick="document.getElementById('test-img-input').click()">
+            <input type="file" id="test-img-input" accept="image/jpeg,image/png" onchange="publishTestImage(this)">
+            <span id="test-img-label">📁 CLICK TO SELECT IMAGE</span>
+          </div>
+          <button class="btn-secondary" id="test-loop-btn" onclick="toggleTestLoop()" style="width:100%;margin-top:4px" disabled>
+            LOOP TEST IMAGE
+          </button>
+          <p id="test-status" style="font-family:var(--font-mono);font-size:10px;color:var(--muted);text-align:center"></p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ PAGE: INTRUSION ══════════════ -->
+<div class="page" id="page-intr">
+  <div class="intrusion-page-inner">
+
+    <!-- LEFT: status + history -->
+    <div class="intrusion-main">
+
+      <!-- ALARM STATUS -->
+      <div class="intrusion-alert-panel" id="intr-alert-panel">
+        <div class="panel-header">
+          <span class="panel-title">Intrusion Alarm</span>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="intr-badge" id="intr-badge">STANDBY</span>
+            <span class="panel-badge">std_msgs/String</span>
+          </div>
+        </div>
+        <div class="intrusion-alert-body">
+          <div class="intrusion-state-badge" id="intr-state-badge">NO ALARM</div>
+          <div class="intrusion-label" id="intr-label">--</div>
+          <div class="intrusion-meta-row">
+            <span>COUNT <b id="intr-count">0</b></span>
+            <span>LAST SEEN <b id="intr-last">--</b></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- PAST EVENTS -->
+      <div class="intrusion-history-panel">
+        <div class="panel-header">
+          <span class="panel-title">Recent Events</span>
+          <button class="btn-nav-cancel" style="padding:3px 12px;font-size:10px" onclick="clearIntrusionHistory()">CLEAR</button>
+        </div>
+        <div class="intrusion-history-body" id="intr-history-body">
+          <div class="intrusion-empty" id="intr-empty">No intrusion events recorded</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT: sidebar -->
+    <div class="intrusion-sidebar">
+
+      <!-- TOPIC CONFIG -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Topic Config</span>
+          <span class="panel-badge">ROSBridge</span>
+        </div>
+        <div class="intr-topic-form">
+          <label>ALARM TOPIC</label>
+          <input id="intr-topic-input" type="text" value="/intrusion_alarm" placeholder="/intrusion_alarm">
+          <button class="btn-primary" style="margin-top:4px" onclick="resubscribeIntrusion()">APPLY TOPIC</button>
+          <p style="font-family:var(--font-mono);font-size:10px;color:var(--muted);line-height:1.6;margin-top:4px">
+            Subscribes to a std_msgs/String topic. Non-empty string triggers the alarm and is shown as the zone label. Empty string clears the alarm.
+          </p>
+        </div>
+      </div>
+
+      <!-- INFO -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">About</span>
+        </div>
+        <div style="padding:12px 16px">
+          <p style="font-family:var(--font-mono);font-size:10px;color:var(--muted);line-height:1.8;letter-spacing:.5px">
+            This tab monitors the intrusion detection script output.<br><br>
+            The script publishes the zone name (e.g. <span style="color:var(--accent)">Zone A</span>) when a person is detected inside a defined cuboid, or an empty string when clear.<br><br>
+            Auto-clears after <b style="color:var(--text)">10s</b> of no alarm messages.
           </p>
         </div>
       </div>
@@ -497,34 +535,31 @@
       + '&redirect_uri=' + encodeURIComponent('https://192.168.0.200/app')
       + '&response_type=code&scope=openid';
     var popup = window.open(loginUrl, 'robot-login', 'width=420,height=520,left=200,top=100');
-    // Keep trying to connect ROSBridge while popup is open
+    // Close popup as soon as rosbridge connects (cookie now valid)
     var rosTimer = setInterval(function() {
       if (ros.isConnected) {
         clearInterval(rosTimer);
         if (popup && !popup.closed) popup.close();
-        // ROS connected — onLoginDone called by the ros connection event
+        onLoginDone(btn);
       } else {
         try { ros.connect('wss://' + ROBOT_IP + '/ws'); } catch(e) {}
       }
     }, 1000);
-    // If user closes popup without completing login — reset button, stop trying
+    // Fallback: if user manually closes popup
     var popupTimer = setInterval(function() {
       if (!popup || popup.closed) {
         clearInterval(popupTimer);
         clearInterval(rosTimer);
-        if (!ros.isConnected) {
-          btn.textContent = 'LOGIN TO ROBOT';
-          btn.disabled = false;
-        }
+        onLoginDone(btn);
       }
     }, 500);
   }
 
-  function onLoginDone() {
-    var btn = document.getElementById('login-btn');
+  function onLoginDone(btn) {
     btn.textContent = 'LOGGED IN';
     btn.className = 'authed';
     btn.disabled = false;
+    ros.connect('wss://' + ROBOT_IP + '/ws');
     if (window._cameraPC) { window._cameraPC.close(); window._cameraPC = null; }
     connectCamera();
     if (window._vncRfb) { try { window._vncRfb.disconnect(); } catch(_) {} }
@@ -558,7 +593,6 @@
     document.getElementById('conn-text').textContent = 'CONNECTED -- ' + ROBOT_IP;
     document.getElementById('sb-ros').textContent = 'CONNECTED';
     document.getElementById('sb-ros').style.color = 'var(--success)';
-    onLoginDone();
     initTopics();
   });
   ros.on('error', function() {
@@ -572,11 +606,6 @@
     document.getElementById('conn-text').textContent = 'DISCONNECTED';
     document.getElementById('sb-ros').textContent = 'DISCONNECTED';
     document.getElementById('sb-ros').style.color = 'var(--accent2)';
-    // Reset login button so user can try again
-    var btn = document.getElementById('login-btn');
-    btn.textContent = 'LOGIN TO ROBOT';
-    btn.className = '';
-    btn.disabled = false;
   });
 
   // ── TOPICS ──
@@ -651,9 +680,7 @@
 
     // ── DETECTION IMAGE FEED ──
     initDetectionSubscriber(DETECTION_TOPIC);
-
-    // ── DETECTION ALERT INDICATOR ──
-    initAlertSubscriber(ALERT_TOPIC);
+    initIntrusionSubscriber(INTRUSION_TOPIC);
 
     // ── DOCKING STATUS — used for badge, undock button, and nav status override ──
     new ROSLIB.Topic({ ros:ros, name:'/robot/charge_manager/docking_status', messageType:'robotnik_msgs/BatteryDockingStatusStamped' })
@@ -1078,10 +1105,17 @@
     var detStatus = document.getElementById('det-badge');
     if (detStatus && detStatus.textContent === 'LIVE') { detBadge.textContent = 'LIVE'; detBadge.className = 'tab-cam-badge live'; detBadge.style.background = 'var(--success)'; detBadge.style.color = 'var(--bg)'; }
     else { detBadge.textContent = ''; detBadge.className = 'tab-cam-badge'; detBadge.style.background = ''; detBadge.style.color = ''; }
+    // update intrusion badge
+    var intrBadge = document.getElementById('intr-tab-badge');
+    var intrState = document.getElementById('intr-state-badge');
+    if (intrState && intrState.classList.contains('alarmed')) { intrBadge.textContent = 'ALARM'; intrBadge.className = 'tab-cam-badge live'; intrBadge.style.background = 'var(--accent2)'; intrBadge.style.color = '#fff'; }
+    else { intrBadge.textContent = ''; intrBadge.className = 'tab-cam-badge'; intrBadge.style.background = ''; intrBadge.style.color = ''; }
   }
 
   // ── DETECTION IMAGE FEED ──
   var _detSub = null;
+  var _testLoopTimer = null;
+  var _testImageData = null;
 
   var DETECTION_TOPIC = '/robot/detections/image_annotated';
 
@@ -1124,143 +1158,6 @@
     });
   }
 
-  // ── DETECTION ALERT INDICATOR ──
-  var _alertSub = null;
-  var _alertClearTimer = null;
-  var _alertCount = 0;
-  var _alertHistory = [];
-  var ALERT_TOPIC = '/robot/detections/alert';
-
-  function pushDetectionHistory(label) {
-    var time = new Date().toLocaleTimeString();
-    _alertHistory.unshift({ label: label, time: time });
-    if (_alertHistory.length > 5) _alertHistory.pop();
-    renderDetectionHistory();
-  }
-
-  function renderDetectionHistory() {
-    var list  = document.getElementById('det-history-list');
-    var empty = document.getElementById('det-history-empty');
-    if (_alertHistory.length === 0) {
-      empty.style.display = 'block';
-      // Remove all items but keep the empty placeholder
-      Array.from(list.querySelectorAll('.det-history-item')).forEach(function(el){ el.remove(); });
-      return;
-    }
-    empty.style.display = 'none';
-    // Rebuild list
-    Array.from(list.querySelectorAll('.det-history-item')).forEach(function(el){ el.remove(); });
-    _alertHistory.forEach(function(entry) {
-      var item = document.createElement('div');
-      item.className = 'det-history-item';
-      item.innerHTML =
-        '<div class="det-history-dot"></div>' +
-        '<div class="det-history-label">' + entry.label + '</div>' +
-        '<div class="det-history-time">' + entry.time + '</div>';
-      list.appendChild(item);
-    });
-  }
-
-  function clearDetectionHistory() {
-    _alertHistory = [];
-    renderDetectionHistory();
-  }
-
-  function setAlertState(state, label) {
-    // state: 'clear' | 'detected' | 'no-topic'
-    var ind   = document.getElementById('det-alert-indicator');
-    var st    = document.getElementById('det-alert-state');
-    var lb    = document.getElementById('det-alert-label');
-    var badge = document.getElementById('alert-feed-badge');
-    ind.className = 'det-alert-indicator ' + state;
-    if (state === 'detected') {
-      st.textContent  = 'DETECTED';
-      lb.textContent  = label || '';
-      badge.textContent = 'ALERT';
-      badge.className = 'det-badge error';
-      // Also flash the Detections tab dot
-      var tabDot = document.querySelector('#tab-det .tab-dot');
-      if (tabDot) { tabDot.style.background = 'var(--accent2)'; tabDot.style.boxShadow = '0 0 8px var(--accent2)'; }
-    } else if (state === 'clear') {
-      st.textContent  = 'CLEAR';
-      lb.textContent  = '';
-      badge.textContent = 'ACTIVE';
-      badge.className = 'det-badge live';
-      // Restore tab dot
-      var tabDot = document.querySelector('#tab-det .tab-dot');
-      if (tabDot) { tabDot.style.background = ''; tabDot.style.boxShadow = ''; }
-    } else {
-      st.textContent  = 'NO TOPIC';
-      lb.textContent  = '';
-      badge.textContent = 'NO TOPIC';
-      badge.className = 'det-badge';
-      var tabDot = document.querySelector('#tab-det .tab-dot');
-      if (tabDot) { tabDot.style.background = ''; tabDot.style.boxShadow = ''; }
-    }
-  }
-
-  function initAlertSubscriber(topic) {
-    if (_alertSub) { try { _alertSub.unsubscribe(); } catch(e) {} _alertSub = null; }
-    if (_alertClearTimer) { clearTimeout(_alertClearTimer); _alertClearTimer = null; }
-    ALERT_TOPIC = topic || ALERT_TOPIC;
-
-    if (!ros || !ros.isConnected) { setAlertState('no-topic'); return; }
-
-    setAlertState('clear');
-
-    _alertSub = new ROSLIB.Topic({
-      ros: ros,
-      name: ALERT_TOPIC,
-      messageType: 'std_msgs/String',
-      throttle_rate: 0,
-      queue_length: 1
-    });
-
-    _alertSub.subscribe(function(msg) {
-      if (_alertClearTimer) { clearTimeout(_alertClearTimer); _alertClearTimer = null; }
-
-      var label = '';
-      // Support plain string OR JSON {"detected":true,"label":"Person"} OR {"label":"Person"}
-      var raw = (msg.data || '').trim();
-      if (raw === '') {
-        setAlertState('clear');
-        return;
-      }
-      try {
-        var parsed = JSON.parse(raw);
-        if (parsed.detected === false || parsed.label === '') { setAlertState('clear'); return; }
-        label = parsed.label || parsed.class || parsed.type || raw;
-      } catch(e) {
-        label = raw; // plain string label
-      }
-
-      _alertCount++;
-      document.getElementById('det-alert-count').textContent = 'Count: ' + _alertCount;
-      document.getElementById('det-alert-last-seen').textContent = 'Last: ' + new Date().toLocaleTimeString();
-      setAlertState('detected', label);
-      pushDetectionHistory(label);
-
-      // Auto-clear after N seconds
-      var secs = parseInt(document.getElementById('det-clear-secs').value, 10) || 5;
-      _alertClearTimer = setTimeout(function() {
-        _alertClearTimer = null;
-        setAlertState('clear');
-      }, secs * 1000);
-    });
-  }
-
-  function applyAlertTopic() {
-    var topic = document.getElementById('det-alert-topic-input').value.trim();
-    if (!topic) { showToast('Enter an alert topic name'); return; }
-    _alertCount = 0;
-    _alertHistory = [];
-    document.getElementById('det-alert-count').textContent = 'Count: 0';
-    document.getElementById('det-alert-last-seen').textContent = 'Last detection: --';
-    renderDetectionHistory();
-    initAlertSubscriber(topic);
-    showToast('Alert subscribed to ' + topic);
-  }
-
   function resubscribeDetection() {
     var topic = document.getElementById('det-topic-input').value.trim();
     if (!topic) { showToast('Enter a topic name'); return; }
@@ -1271,6 +1168,156 @@
     document.getElementById('det-badge').textContent = 'NO FEED';
     document.getElementById('det-badge').className = 'det-badge';
     initDetectionSubscriber(topic);
+    showToast('Subscribed to ' + topic);
+  }
+
+  // ── TEST PUBLISHER ──
+  function publishTestImage(input) {
+    var file = input.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      // Strip data URL prefix to get raw base64
+      var b64 = e.target.result.split(',')[1];
+      var format = file.type === 'image/png' ? 'png' : 'jpeg';
+      _testImageData = { b64: b64, format: format };
+      document.getElementById('test-img-label').textContent = '✓ ' + file.name;
+      document.getElementById('test-loop-btn').disabled = false;
+      document.getElementById('test-status').textContent = '';
+      // Publish once immediately
+      publishTestFrame();
+      showToast('Test image loaded — published once');
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function publishTestFrame() {
+    if (!_testImageData || !ros || !ros.isConnected) return;
+    var topic = new ROSLIB.Topic({
+      ros: ros,
+      name: document.getElementById('det-topic-input').value.trim() || DETECTION_TOPIC,
+      messageType: 'sensor_msgs/CompressedImage'
+    });
+    topic.publish(new ROSLIB.Message({
+      header: { seq: 0, stamp: { secs: 0, nsecs: 0 }, frame_id: 'camera' },
+      format: _testImageData.format,
+      data: _testImageData.b64
+    }));
+  }
+
+  function toggleTestLoop() {
+    var btn = document.getElementById('test-loop-btn');
+    var status = document.getElementById('test-status');
+    if (_testLoopTimer) {
+      clearInterval(_testLoopTimer);
+      _testLoopTimer = null;
+      btn.textContent = 'LOOP TEST IMAGE';
+      btn.style.borderColor = '';
+      btn.style.color = '';
+      status.textContent = '';
+    } else {
+      if (!_testImageData) { showToast('Load an image first'); return; }
+      _testLoopTimer = setInterval(publishTestFrame, 200); // ~5fps loop
+      btn.textContent = 'STOP LOOP';
+      btn.style.borderColor = 'var(--accent2)';
+      btn.style.color = 'var(--accent2)';
+      status.textContent = 'Publishing at ~5 fps...';
+    }
+  }
+
+  // ── INTRUSION ALARM ──
+  var _intrSub = null;
+  var _intrCount = 0;
+  var _intrHistory = [];
+  var _intrClearTimer = null;
+  var INTRUSION_TOPIC = '/intrusion_alarm';
+
+  function initIntrusionSubscriber(topic) {
+    if (_intrSub) { try { _intrSub.unsubscribe(); } catch(e) {} _intrSub = null; }
+    INTRUSION_TOPIC = topic || INTRUSION_TOPIC;
+    if (!ros || !ros.isConnected) return;
+    _intrSub = new ROSLIB.Topic({
+      ros: ros,
+      name: INTRUSION_TOPIC,
+      messageType: 'std_msgs/String',
+      throttle_rate: 0,
+      queue_length: 1
+    });
+    _intrSub.subscribe(function(msg) {
+      var label = (msg.data || '').trim();
+      if (label === '') {
+        setIntrusionClear();
+      } else {
+        setIntrusionAlarmed(label);
+      }
+    });
+  }
+
+  function setIntrusionAlarmed(label) {
+    if (_intrClearTimer) { clearTimeout(_intrClearTimer); _intrClearTimer = null; }
+    _intrCount++;
+    var now = new Date().toLocaleTimeString();
+    document.getElementById('intr-alert-panel').classList.add('alarmed');
+    document.getElementById('intr-state-badge').className = 'intrusion-state-badge alarmed';
+    document.getElementById('intr-state-badge').textContent = '⚠ INTRUSION DETECTED';
+    document.getElementById('intr-label').className = 'intrusion-label alarmed';
+    document.getElementById('intr-label').textContent = label;
+    document.getElementById('intr-count').textContent = _intrCount;
+    document.getElementById('intr-last').textContent = now;
+    document.getElementById('intr-badge').className = 'intr-badge alarmed';
+    document.getElementById('intr-badge').textContent = 'ALARM';
+    // tab badge
+    var tb = document.getElementById('intr-tab-badge');
+    tb.textContent = 'ALARM'; tb.className = 'tab-cam-badge live';
+    tb.style.background = 'var(--accent2)'; tb.style.color = '#fff';
+    // add to history
+    _intrHistory.unshift({ label: label, time: now });
+    if (_intrHistory.length > 5) _intrHistory.pop();
+    renderIntrusionHistory();
+    // auto-clear after 10s
+    _intrClearTimer = setTimeout(setIntrusionClear, 10000);
+  }
+
+  function setIntrusionClear() {
+    if (_intrClearTimer) { clearTimeout(_intrClearTimer); _intrClearTimer = null; }
+    document.getElementById('intr-alert-panel').classList.remove('alarmed');
+    document.getElementById('intr-state-badge').className = 'intrusion-state-badge clear';
+    document.getElementById('intr-state-badge').textContent = '✓ CLEAR';
+    document.getElementById('intr-label').className = 'intrusion-label';
+    document.getElementById('intr-label').textContent = '--';
+    document.getElementById('intr-badge').className = 'intr-badge clear';
+    document.getElementById('intr-badge').textContent = 'CLEAR';
+    var tb = document.getElementById('intr-tab-badge');
+    tb.textContent = ''; tb.className = 'tab-cam-badge'; tb.style.background = ''; tb.style.color = '';
+  }
+
+  function renderIntrusionHistory() {
+    var body = document.getElementById('intr-history-body');
+    var empty = document.getElementById('intr-empty');
+    if (_intrHistory.length === 0) { empty.style.display = 'block'; return; }
+    empty.style.display = 'none';
+    var cards = body.querySelectorAll('.intrusion-event-card');
+    cards.forEach(function(c) { c.remove(); });
+    _intrHistory.forEach(function(ev) {
+      var card = document.createElement('div');
+      card.className = 'intrusion-event-card';
+      card.innerHTML = '<span class="ev-label">' + ev.label + '</span><span class="ev-time">' + ev.time + '</span>';
+      body.appendChild(card);
+    });
+  }
+
+  function clearIntrusionHistory() {
+    _intrHistory = [];
+    _intrCount = 0;
+    document.getElementById('intr-count').textContent = '0';
+    renderIntrusionHistory();
+  }
+
+  function resubscribeIntrusion() {
+    var topic = document.getElementById('intr-topic-input').value.trim();
+    if (!topic) { showToast('Enter a topic name'); return; }
+    setIntrusionClear();
+    initIntrusionSubscriber(topic);
     showToast('Subscribed to ' + topic);
   }
 
@@ -1338,7 +1385,7 @@
     let rfb;
     try { rfb = new RFB(container, VNC_URL, { credentials: { password: VNC_PASSWORD } }); }
     catch(e) { setVncStatus('RFB error: ' + e.message, false, true); return; }
-    rfb.viewOnly = false; rfb.scaleViewport = true; rfb.clipViewport = false;
+    rfb.viewOnly = false; rfb.scaleViewport = true; rfb.clipViewport = true;
     rfb.resizeSession = true; rfb.background = '#060910';
     rfb.addEventListener('connect', () => {
       vncLog('RFB connected'); overlay.classList.add('hidden');
