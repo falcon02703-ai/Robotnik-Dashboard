@@ -182,6 +182,18 @@
     .det-clear-timer-row{display:flex;align-items:center;gap:8px;font-family:var(--font-mono);font-size:10px;color:var(--muted)}
     .det-clear-timer-row input[type=number]{width:54px;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:var(--font-mono);font-size:12px;padding:4px 6px;border-radius:2px;text-align:center}
     .det-clear-timer-row input[type=number]:focus{outline:none;border-color:var(--accent)}
+    /* ── PAST DETECTIONS ── */
+    .det-history-section{display:flex;flex-direction:column;gap:6px}
+    .det-history-title{font-family:var(--font-mono);font-size:10px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;display:flex;align-items:center;justify-content:space-between}
+    .det-history-clear{font-family:var(--font-mono);font-size:10px;color:var(--muted);background:none;border:none;cursor:pointer;padding:0;letter-spacing:1px;text-transform:uppercase}
+    .det-history-clear:hover{color:var(--accent2)}
+    .det-history-list{display:flex;flex-direction:column;gap:4px}
+    .det-history-item{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:2px;border:1px solid var(--border);background:rgba(255,107,53,.05);animation:det-history-fade .3s ease}
+    @keyframes det-history-fade{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+    .det-history-dot{width:7px;height:7px;border-radius:50%;background:var(--accent2);flex-shrink:0}
+    .det-history-label{font-family:var(--font-mono);font-size:11px;color:var(--warn);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .det-history-time{font-family:var(--font-mono);font-size:10px;color:var(--muted);flex-shrink:0}
+    .det-history-empty{font-family:var(--font-mono);font-size:10px;color:var(--border);letter-spacing:1px;text-align:center;padding:8px 0}
   </style>
 </head>
 <body>
@@ -403,6 +415,17 @@
           <div class="det-alert-meta">
             <span id="det-alert-last-seen">Last detection: --</span>
             <span id="det-alert-count">Count: 0</span>
+          </div>
+
+          <!-- Past detections -->
+          <div class="det-history-section">
+            <div class="det-history-title">
+              <span>PAST DETECTIONS</span>
+              <button class="det-history-clear" onclick="clearDetectionHistory()">CLEAR</button>
+            </div>
+            <div class="det-history-list" id="det-history-list">
+              <div class="det-history-empty" id="det-history-empty">NO DETECTIONS YET</div>
+            </div>
           </div>
 
           <!-- Alert topic config -->
@@ -1090,7 +1113,43 @@
   var _alertSub = null;
   var _alertClearTimer = null;
   var _alertCount = 0;
+  var _alertHistory = [];
   var ALERT_TOPIC = '/robot/detections/alert';
+
+  function pushDetectionHistory(label) {
+    var time = new Date().toLocaleTimeString();
+    _alertHistory.unshift({ label: label, time: time });
+    if (_alertHistory.length > 5) _alertHistory.pop();
+    renderDetectionHistory();
+  }
+
+  function renderDetectionHistory() {
+    var list  = document.getElementById('det-history-list');
+    var empty = document.getElementById('det-history-empty');
+    if (_alertHistory.length === 0) {
+      empty.style.display = 'block';
+      // Remove all items but keep the empty placeholder
+      Array.from(list.querySelectorAll('.det-history-item')).forEach(function(el){ el.remove(); });
+      return;
+    }
+    empty.style.display = 'none';
+    // Rebuild list
+    Array.from(list.querySelectorAll('.det-history-item')).forEach(function(el){ el.remove(); });
+    _alertHistory.forEach(function(entry) {
+      var item = document.createElement('div');
+      item.className = 'det-history-item';
+      item.innerHTML =
+        '<div class="det-history-dot"></div>' +
+        '<div class="det-history-label">' + entry.label + '</div>' +
+        '<div class="det-history-time">' + entry.time + '</div>';
+      list.appendChild(item);
+    });
+  }
+
+  function clearDetectionHistory() {
+    _alertHistory = [];
+    renderDetectionHistory();
+  }
 
   function setAlertState(state, label) {
     // state: 'clear' | 'detected' | 'no-topic'
@@ -1164,6 +1223,7 @@
       document.getElementById('det-alert-count').textContent = 'Count: ' + _alertCount;
       document.getElementById('det-alert-last-seen').textContent = 'Last: ' + new Date().toLocaleTimeString();
       setAlertState('detected', label);
+      pushDetectionHistory(label);
 
       // Auto-clear after N seconds
       var secs = parseInt(document.getElementById('det-clear-secs').value, 10) || 5;
@@ -1178,8 +1238,10 @@
     var topic = document.getElementById('det-alert-topic-input').value.trim();
     if (!topic) { showToast('Enter an alert topic name'); return; }
     _alertCount = 0;
+    _alertHistory = [];
     document.getElementById('det-alert-count').textContent = 'Count: 0';
     document.getElementById('det-alert-last-seen').textContent = 'Last detection: --';
+    renderDetectionHistory();
     initAlertSubscriber(topic);
     showToast('Alert subscribed to ' + topic);
   }
