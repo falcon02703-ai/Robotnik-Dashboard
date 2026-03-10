@@ -496,31 +496,34 @@
       + '&redirect_uri=' + encodeURIComponent('https://192.168.0.200/app')
       + '&response_type=code&scope=openid';
     var popup = window.open(loginUrl, 'robot-login', 'width=420,height=520,left=200,top=100');
-    // Close popup as soon as rosbridge connects (cookie now valid)
+    // Keep trying to connect ROSBridge while popup is open
     var rosTimer = setInterval(function() {
       if (ros.isConnected) {
         clearInterval(rosTimer);
         if (popup && !popup.closed) popup.close();
-        onLoginDone(btn);
+        // ROS connected — onLoginDone called by the ros connection event
       } else {
         try { ros.connect('wss://' + ROBOT_IP + '/ws'); } catch(e) {}
       }
     }, 1000);
-    // Fallback: if user manually closes popup
+    // If user closes popup without completing login — reset button, stop trying
     var popupTimer = setInterval(function() {
       if (!popup || popup.closed) {
         clearInterval(popupTimer);
         clearInterval(rosTimer);
-        onLoginDone(btn);
+        if (!ros.isConnected) {
+          btn.textContent = 'LOGIN TO ROBOT';
+          btn.disabled = false;
+        }
       }
     }, 500);
   }
 
-  function onLoginDone(btn) {
+  function onLoginDone() {
+    var btn = document.getElementById('login-btn');
     btn.textContent = 'LOGGED IN';
     btn.className = 'authed';
     btn.disabled = false;
-    ros.connect('wss://' + ROBOT_IP + '/ws');
     if (window._cameraPC) { window._cameraPC.close(); window._cameraPC = null; }
     connectCamera();
     if (window._vncRfb) { try { window._vncRfb.disconnect(); } catch(_) {} }
@@ -554,6 +557,7 @@
     document.getElementById('conn-text').textContent = 'CONNECTED -- ' + ROBOT_IP;
     document.getElementById('sb-ros').textContent = 'CONNECTED';
     document.getElementById('sb-ros').style.color = 'var(--success)';
+    onLoginDone();
     initTopics();
   });
   ros.on('error', function() {
@@ -567,6 +571,11 @@
     document.getElementById('conn-text').textContent = 'DISCONNECTED';
     document.getElementById('sb-ros').textContent = 'DISCONNECTED';
     document.getElementById('sb-ros').style.color = 'var(--accent2)';
+    // Reset login button so user can try again
+    var btn = document.getElementById('login-btn');
+    btn.textContent = 'LOGIN TO ROBOT';
+    btn.className = '';
+    btn.disabled = false;
   });
 
   // ── TOPICS ──
