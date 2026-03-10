@@ -193,7 +193,7 @@
     .det-history-dot{width:7px;height:7px;border-radius:50%;background:var(--accent2);flex-shrink:0}
     .det-history-label{font-family:var(--font-mono);font-size:11px;color:var(--warn);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     .det-history-time{font-family:var(--font-mono);font-size:10px;color:var(--muted);flex-shrink:0}
-    .det-history-empty{font-family:var(--font-mono);font-size:10px;color:var(--border);letter-spacing:1px;text-align:center;padding:8px 0}
+    .det-history-empty{font-family:var(--font-mono);font-size:10px;color:var(--muted);letter-spacing:1px;text-align:center;padding:8px 0}
   </style>
 </head>
 <body>
@@ -370,26 +370,45 @@
 <div class="page" id="page-det">
   <div class="detection-page-inner">
 
-    <!-- MAIN FEED -->
-    <div class="detection-feed-panel">
-      <div class="panel-header">
-        <span class="panel-title">Detected Image Feed</span>
-        <div style="display:flex;align-items:center;gap:8px">
-          <span class="det-badge" id="det-badge">NO FEED</span>
-          <span class="panel-badge">sensor_msgs/CompressedImage</span>
+    <!-- LEFT COLUMN: feed + history -->
+    <div style="display:flex;flex-direction:column;gap:16px">
+
+      <!-- MAIN FEED -->
+      <div class="detection-feed-panel">
+        <div class="panel-header">
+          <span class="panel-title">Detected Image Feed</span>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="det-badge" id="det-badge">NO FEED</span>
+            <span class="panel-badge">sensor_msgs/CompressedImage</span>
+          </div>
+        </div>
+        <div class="detection-img-wrap">
+          <div class="detection-placeholder" id="det-placeholder">
+            <span class="detection-placeholder-icon">🔍</span>
+            <span>AWAITING DETECTION FEED</span>
+            <span style="color:var(--border);font-size:10px" id="det-topic-display">/robot/detections/image_annotated</span>
+          </div>
+          <img id="detection-img" alt="Detection feed" style="display:none">
         </div>
       </div>
-      <div class="detection-img-wrap">
-        <!-- Placeholder shown until first image arrives -->
-        <div class="detection-placeholder" id="det-placeholder">
-          <span class="detection-placeholder-icon">🔍</span>
-          <span>AWAITING DETECTION FEED</span>
-          <span style="color:var(--border);font-size:10px" id="det-topic-display">/robot/detections/image_annotated</span>
+
+      <!-- PAST DETECTIONS -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Past Detections</span>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span id="det-alert-count" class="panel-badge">Count: 0</span>
+            <button class="det-history-clear" onclick="clearDetectionHistory()">CLEAR</button>
+          </div>
         </div>
-        <!-- Image shown once feed is live (hidden initially) -->
-        <img id="detection-img" alt="Detection feed" style="display:none">
+        <div style="padding:12px 16px;display:flex;flex-direction:column;gap:6px">
+          <div class="det-history-list" id="det-history-list">
+            <div class="det-history-empty" id="det-history-empty">NO DETECTIONS YET</div>
+          </div>
+        </div>
       </div>
-    </div>
+
+    </div><!-- /left column -->
 
     <!-- SIDEBAR -->
     <div class="detection-sidebar">
@@ -414,18 +433,6 @@
 
           <div class="det-alert-meta">
             <span id="det-alert-last-seen">Last detection: --</span>
-            <span id="det-alert-count">Count: 0</span>
-          </div>
-
-          <!-- Past detections -->
-          <div class="det-history-section">
-            <div class="det-history-title">
-              <span>PAST DETECTIONS</span>
-              <button class="det-history-clear" onclick="clearDetectionHistory()">CLEAR</button>
-            </div>
-            <div class="det-history-list" id="det-history-list">
-              <div class="det-history-empty" id="det-history-empty">NO DETECTIONS YET</div>
-            </div>
           </div>
 
           <!-- Alert topic config -->
