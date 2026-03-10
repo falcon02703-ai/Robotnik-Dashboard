@@ -1338,7 +1338,7 @@
     let rfb;
     try { rfb = new RFB(container, VNC_URL, { credentials: { password: VNC_PASSWORD } }); }
     catch(e) { setVncStatus('RFB error: ' + e.message, false, true); return; }
-    rfb.viewOnly = false; rfb.scaleViewport = true; rfb.clipViewport = true;
+    rfb.viewOnly = false; rfb.scaleViewport = true; rfb.clipViewport = false;
     rfb.resizeSession = true; rfb.background = '#060910';
     rfb.addEventListener('connect', () => {
       vncLog('RFB connected'); overlay.classList.add('hidden');
