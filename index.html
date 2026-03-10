@@ -29,7 +29,7 @@
     #conn-dot.connected{background:var(--success);animation:pulse 2s infinite}
     #conn-dot.error{background:var(--accent2)}
     @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(0,255,136,.4)}50%{box-shadow:0 0 0 6px rgba(0,255,136,0)}}
-    .main-grid{display:grid;grid-template-columns:1fr 420px;gap:16px;padding:16px 28px}
+    .main-grid{display:grid;grid-template-columns:1fr 408px;gap:16px;padding:16px 28px}
     .panel{background:var(--surface);border:1px solid var(--border);border-radius:4px}
     .panel-header{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--border);background:rgba(0,229,255,.04);border-radius:4px 4px 0 0}
     .panel-title{font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--accent)}
@@ -55,7 +55,7 @@
     .btn-nav-cancel:hover{background:var(--accent2);color:var(--bg)}
     .btn-nav-cancel.cancelled{border-color:var(--success);color:var(--success)}
     .btn-nav-cancel:disabled{opacity:.4;cursor:not-allowed}
-    .right-col{grid-column:2;display:flex;flex-direction:column;gap:16px;align-self:start;max-height:calc(100vh - 175px);overflow-y:auto;overflow-x:hidden;padding-bottom:4px;padding-right:4px;scrollbar-width:thin;scrollbar-color:rgba(0,229,255,.3) transparent}
+    .right-col{grid-column:2;display:flex;flex-direction:column;gap:16px;align-self:start;max-height:calc(100vh - 175px);overflow-y:auto;overflow-x:hidden;padding-bottom:4px;scrollbar-width:thin;scrollbar-color:rgba(0,229,255,.3) transparent;scrollbar-gutter:stable}
     .right-col::-webkit-scrollbar{width:4px}
     .right-col::-webkit-scrollbar-track{background:transparent}
     .right-col::-webkit-scrollbar-thumb{background:rgba(0,229,255,.3);border-radius:2px}
