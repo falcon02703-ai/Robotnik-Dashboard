@@ -647,7 +647,15 @@
   }
   window.addEventListener('resize', onLayoutRefresh);
   document.addEventListener('visibilitychange', function() {
-    if (document.visibilityState === 'visible') onLayoutRefresh();
+    if (document.visibilityState === 'visible') {
+      onLayoutRefresh();
+      // If VNC was kicked off while we were away (e.g. Robotnik HMI took the session),
+      // automatically reclaim it now that we're back in focus
+      if (!window._vncConnected) {
+        console.log('[VNC] Tab regained focus, VNC not connected — reconnecting...');
+        connectVNC();
+      }
+    }
   });
   var ros = new ROSLIB.Ros({ url: 'wss://' + ROBOT_IP + '/ws' });
 
@@ -1533,6 +1541,7 @@
     rfb.viewOnly = false; rfb.scaleViewport = true; rfb.clipViewport = true;
     rfb.resizeSession = true; rfb.background = '#060910';
     rfb.addEventListener('connect', () => {
+      window._vncConnected = true;
       vncLog('RFB connected'); overlay.classList.add('hidden');
       document.getElementById('sb-map').textContent = 'VNC LIVE';
       document.getElementById('sb-map').style.color = 'var(--success)';
@@ -1548,6 +1557,7 @@
       }, 500);
     });
     rfb.addEventListener('disconnect', (e) => {
+      window._vncConnected = false;
       const d = e.detail || {};
       if (window._vncResizeTimer) { clearInterval(window._vncResizeTimer); window._vncResizeTimer = null; }
       setVncStatus(d.clean ? 'VNC DISCONNECTED' : 'VNC LOST: ' + (d.reason || 'unexpected'), false, true);
