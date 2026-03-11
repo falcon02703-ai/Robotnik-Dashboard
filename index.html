@@ -867,7 +867,7 @@
       badge.textContent = 'CONNECTED'; badge.className = 'ext-ws-status connected';
       logExt('Connected to ' + url);
       // ── Register with the RaaS server as a dashboard operator ──
-      var registration = JSON.stringify({ type:'register', client_type:'robot', robot_id:'sec-robot-01' });
+      var registration = JSON.stringify({ type:'register', client_type:'dashboard', role:'operator' });
       extWS.send(registration);
       logExt('Sent registration: ' + registration);
     };
@@ -917,6 +917,7 @@
       badge.textContent = 'ERROR'; badge.className = 'ext-ws-status error';
     };
     extWS.onclose = function() {
+      extWS = null;
       var btn = document.getElementById('ext-ws-btn');
       btn.textContent = 'CONNECT';
       btn.className = 'btn-connect';
