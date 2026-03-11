@@ -600,12 +600,20 @@
         try { ros.connect('wss://' + ROBOT_IP + '/ws'); } catch(e) {}
       }
     }, 1000);
-    // Fallback: if user manually closes popup
+    // Fallback: if user manually closes popup without completing login
     var popupTimer = setInterval(function() {
       if (!popup || popup.closed) {
         clearInterval(popupTimer);
         clearInterval(rosTimer);
-        onLoginDone(btn);
+        if (ros.isConnected) {
+          // Popup closed because login succeeded and rosbridge connected
+          onLoginDone(btn);
+        } else {
+          // User dismissed the popup without logging in — reset button
+          btn.textContent = 'LOGIN TO ROBOT';
+          btn.disabled = false;
+          btn.className = '';
+        }
       }
     }, 500);
   }
@@ -661,6 +669,11 @@
     document.getElementById('conn-text').textContent = 'DISCONNECTED';
     document.getElementById('sb-ros').textContent = 'DISCONNECTED';
     document.getElementById('sb-ros').style.color = 'var(--accent2)';
+    // Reset login button so user knows they need to re-authenticate
+    var btn = document.getElementById('login-btn');
+    btn.textContent = 'LOGIN TO ROBOT';
+    btn.className = '';
+    btn.disabled = false;
   });
 
   // ── TOPICS ──
