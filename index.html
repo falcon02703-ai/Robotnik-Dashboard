@@ -1545,6 +1545,9 @@
       vncLog('RFB connected'); overlay.classList.add('hidden');
       document.getElementById('sb-map').textContent = 'VNC LIVE';
       document.getElementById('sb-map').style.color = 'var(--success)';
+      // Full layout reset first so the container has correct dimensions before
+      // the resize timer starts — critical when reconnecting after tab switch
+      onLayoutRefresh();
       if (window._vncResizeTimer) clearInterval(window._vncResizeTimer);
       var ticks = 0;
       window._vncResizeTimer = setInterval(function() {
