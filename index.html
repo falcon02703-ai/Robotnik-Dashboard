@@ -874,10 +874,14 @@
     extWS.onmessage = function(event) {
       try {
         var msg = JSON.parse(event.data);
+        // ── Server acknowledgement/status messages ──
+        if (msg.type === 'registered') {
+          logExt('Registration confirmed by server ✓');
+        } else if (msg.type === 'error') {
+          logExt('Server error: ' + (msg.error || JSON.stringify(msg)));
         // ── New RaaS protocol: {type:"publish", robot_id, topic, msg_type, data} ──
-        if (msg.type === 'publish' && msg.topic && msg.data !== undefined) {
+        } else if (msg.type === 'publish' && msg.topic && msg.data !== undefined) {
           var msgType = msg.msg_type || 'std_msgs/String';
-          // Special case: nav goal
           if (msg.topic === '/robot/move_base_flex/move_base_simple/goal' || msg.topic === '/robot/rms/simple_goal') {
             var d = msg.data;
             logExt('[RaaS goal] x:' + d.x + ' y:' + d.y + ' yaw:' + (d.yaw||0));
