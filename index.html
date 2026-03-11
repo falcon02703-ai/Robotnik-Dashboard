@@ -848,7 +848,6 @@
   }
 
   // ── TASK 2: EXTERNAL WEBSOCKET ──
-  // Expects JSON: {"x": 1.0, "y": 2.0, "yaw": 0.0}
   var extWS = null;
   function logExt(msg) {
     var el = document.getElementById('ext-ws-log');
@@ -867,23 +866,44 @@
       var badge = document.getElementById('ext-ws-header-status');
       badge.textContent = 'CONNECTED'; badge.className = 'ext-ws-status connected';
       logExt('Connected to ' + url);
+      // ── Register with the RaaS server as a dashboard operator ──
+      var registration = JSON.stringify({ type:'message', client_type:'dashboard', role:'operator' });
+      extWS.send(registration);
+      logExt('Sent registration: ' + registration);
     };
     extWS.onmessage = function(event) {
       try {
         var msg = JSON.parse(event.data);
-        if (msg.topic && msg.data !== undefined) {
+        // ── New RaaS protocol: {type:"publish", robot_id, topic, msg_type, data} ──
+        if (msg.type === 'publish' && msg.topic && msg.data !== undefined) {
+          var msgType = msg.msg_type || 'std_msgs/String';
+          // Special case: nav goal
+          if (msg.topic === '/robot/move_base_flex/move_base_simple/goal' || msg.topic === '/robot/rms/simple_goal') {
+            var d = msg.data;
+            logExt('[RaaS goal] x:' + d.x + ' y:' + d.y + ' yaw:' + (d.yaw||0));
+            publishGoalPose(parseFloat(d.x), parseFloat(d.y), parseFloat(d.yaw||0));
+          } else {
+            var t = new ROSLIB.Topic({ ros:ros, name:msg.topic, messageType: msgType });
+            t.publish(new ROSLIB.Message(msg.data));
+            logExt('[RaaS] ' + msg.topic + ' → ' + JSON.stringify(msg.data));
+          }
+        // ── Legacy format: {topic, data} ──
+        } else if (msg.topic && msg.data !== undefined) {
           if (msg.topic === '/robot/rms/simple_goal' && msg.data.x !== undefined) {
-            logExt('[' + msg.topic + '] goal x:' + msg.data.x + ' y:' + msg.data.y + ' yaw:' + (msg.data.yaw||0));
+            logExt('[goal] x:' + msg.data.x + ' y:' + msg.data.y + ' yaw:' + (msg.data.yaw||0));
             publishGoalPose(parseFloat(msg.data.x), parseFloat(msg.data.y), parseFloat(msg.data.yaw||0));
           } else {
             var t = new ROSLIB.Topic({ ros:ros, name:msg.topic, messageType: msg.type || 'std_msgs/String' });
             t.publish(new ROSLIB.Message(msg.data));
             logExt('[' + msg.topic + '] ' + JSON.stringify(msg.data));
           }
+        // ── Bare {x, y, yaw} goal ──
         } else if (msg.x !== undefined && msg.y !== undefined) {
           logExt('[goal] x:' + msg.x + ' y:' + msg.y + ' yaw:' + (msg.yaw||0));
           publishGoalPose(parseFloat(msg.x), parseFloat(msg.y), parseFloat(msg.yaw||0));
-        } else { logExt('Unknown format: ' + event.data); }
+        } else {
+          logExt('Unknown format: ' + event.data);
+        }
       } catch(e) { logExt('Parse error: ' + e.message); }
     };
     extWS.onerror = function() {
