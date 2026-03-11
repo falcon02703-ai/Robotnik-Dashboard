@@ -656,6 +656,11 @@
     document.getElementById('conn-text').textContent = 'CONNECTED -- ' + ROBOT_IP;
     document.getElementById('sb-ros').textContent = 'CONNECTED';
     document.getElementById('sb-ros').style.color = 'var(--success)';
+    // Reflect authenticated state on the button (catches auto-reconnect on page refresh)
+    var btn = document.getElementById('login-btn');
+    btn.textContent = 'LOGGED IN';
+    btn.className = 'authed';
+    btn.disabled = true;
     initTopics();
   });
   ros.on('error', function() {
