@@ -1512,25 +1512,34 @@
 </script>
 
 <script type="module">
-(async function() {
+async function initVNC() {
   let RFB;
+  const overlay    = document.getElementById('vnc-overlay');
+  const statusText = document.getElementById('vnc-status-text');
+  const spinner    = document.getElementById('vnc-spinner');
+  const reconnBtn  = document.getElementById('vnc-reconnect');
+
+  statusText.textContent = 'LOADING noVNC...';
+  spinner.style.display  = 'block';
+  reconnBtn.style.display = 'none';
+  overlay.classList.remove('hidden');
+
   try {
     const mod = await import('https://cdn.jsdelivr.net/npm/@novnc/novnc@1.4.0/core/rfb.js');
     RFB = mod.default;
   } catch(importErr) {
     console.error('[VNC] noVNC import failed:', importErr);
-    document.getElementById('vnc-status-text').textContent = 'noVNC LOAD ERROR';
-    document.getElementById('vnc-spinner').style.display   = 'none';
-    document.getElementById('vnc-reconnect').style.display = 'inline-block';
+    statusText.textContent  = 'noVNC LOAD ERROR — check network';
+    spinner.style.display   = 'none';
+    reconnBtn.style.display = 'inline-block';
+    // Wire RECONNECT to retry the full init (import + connect)
+    window.connectVNC = function() { initVNC(); };
     return;
   }
+
   const VNC_URL = 'wss://192.168.0.200/rviz_web';
   const VNC_PASSWORD = 'RXN82ybVZbMsyriB';
   const container  = document.getElementById('rviz-container');
-  const overlay    = document.getElementById('vnc-overlay');
-  const statusText = document.getElementById('vnc-status-text');
-  const spinner    = document.getElementById('vnc-spinner');
-  const reconnBtn  = document.getElementById('vnc-reconnect');
   function vncLog(msg, level) { console[level || 'log']('[VNC]', msg); statusText.textContent = msg; }
   function setVncStatus(msg, showSpinner, showReconnect) {
     vncLog(msg);
@@ -1599,6 +1608,8 @@
     window._vncRfb = rfb;
   };
   connectVNC();
-})();
+}
+window.connectVNC = function() { initVNC(); };
+initVNC();
 </script>
 </body>
