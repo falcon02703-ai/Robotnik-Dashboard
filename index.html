@@ -874,7 +874,7 @@
       // ── Keepalive heartbeat ──
       extWS._pingInterval = setInterval(function() {
         if (extWS && extWS.readyState === WebSocket.OPEN) {
-          extWS.send(JSON.stringify({ type: 'ping' }));
+          extWS.send(JSON.stringify({ type: 'ping', robot_id: 'sec-robot-01' }));
         }
       }, 5000);
     };
@@ -884,6 +884,8 @@
         // ── Server acknowledgement/status messages ──
         if (msg.type === 'registered') {
           logExt('Registration confirmed by server ✓');
+        } else if (msg.type === 'pong' || msg.type === 'heartbeat') {
+          // server acknowledged keepalive - no need to log
         } else if (msg.type === 'error') {
           logExt('Server error: ' + (msg.error || JSON.stringify(msg)));
         // ── New RaaS protocol: {type:"publish", robot_id, topic, msg_type, data} ──
