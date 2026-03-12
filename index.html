@@ -889,7 +889,7 @@
         } else if (msg.type === 'error') {
           logExt('Server error: ' + (msg.error || JSON.stringify(msg)));
         // ── RaaS call_service: forward to rosbridge ──
-        } else if (msg.op === 'call_service' && msg.service) {
+        } else if ((msg.op === 'call_service' || msg.type === 'call_service') && msg.service) {
           if (msg.service === '/robot/command_sequencer/command' && msg.args && msg.args.command) {
             // Patrol sequence: clear costmaps first, then fire the sequence
             logExt('[RaaS] Patrol requested: ' + msg.args.command + ' — clearing costmaps first...');
