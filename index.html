@@ -854,7 +854,7 @@
     el.textContent = '[' + new Date().toLocaleTimeString() + '] ' + msg + '\n' + el.textContent;
   }
   function toggleExternalWS() {
-    if (extWS && extWS.readyState === WebSocket.OPEN) { extWS.close(); return; }
+    if (extWS && extWS.readyState === WebSocket.OPEN) { extWS._intentionalClose = true; extWS.close(); return; }
     var url = document.getElementById('ext-ws-url').value.trim();
     try { extWS = new WebSocket(url); } catch(e) { logExt('ERROR: ' + e.message); return; }
     extWS.onopen = function() {
@@ -927,6 +927,7 @@
     };
     extWS.onclose = function() {
       clearInterval(extWS && extWS._pingInterval);
+      var wasIntentional = extWS && extWS._intentionalClose;
       extWS = null;
       var btn = document.getElementById('ext-ws-btn');
       btn.textContent = 'CONNECT';
@@ -936,6 +937,16 @@
       var badge = document.getElementById('ext-ws-header-status');
       badge.textContent = 'DISCONNECTED'; badge.className = 'ext-ws-status error';
       logExt('Disconnected');
+      if (!wasIntentional) {
+        logExt('Reconnecting in 3s...');
+        setTimeout(function() {
+          var btn = document.getElementById('ext-ws-btn');
+          if (btn.textContent === 'CONNECT') {
+            logExt('Reconnecting...');
+            toggleExternalWS();
+          }
+        }, 3000);
+      }
     };
   }
 
