@@ -888,6 +888,31 @@
           // server acknowledged keepalive - no need to log
         } else if (msg.type === 'error') {
           logExt('Server error: ' + (msg.error || JSON.stringify(msg)));
+        // ── RaaS call_service: forward to rosbridge ──
+        } else if (msg.op === 'call_service' && msg.service) {
+          if (msg.service === '/robot/command_sequencer/command' && msg.args && msg.args.command) {
+            // Patrol sequence: clear costmaps first, then fire the sequence
+            logExt('[RaaS] Patrol requested: ' + msg.args.command + ' — clearing costmaps first...');
+            var clearSvc = new ROSLIB.Service({ ros:ros, name:'/robot/move_base_flex/clear_costmaps', serviceType:'std_srvs/Empty' });
+            clearSvc.callService(new ROSLIB.ServiceRequest({}), function() {
+              var seqSvc = new ROSLIB.Service({ ros:ros, name:'/robot/command_sequencer/command', serviceType:'robot_simple_command_manager_msgs/SetCommandString' });
+              seqSvc.callService(new ROSLIB.ServiceRequest({ command: msg.args.command }), function(result) {
+                logExt('[RaaS] Sequence "' + msg.args.command + '" started: ' + JSON.stringify(result));
+              }, function(err) {
+                logExt('[RaaS] Sequence error: ' + err);
+              });
+            }, function(err) {
+              logExt('[RaaS] clear_costmaps error: ' + err);
+            });
+          } else {
+            // Generic service call passthrough
+            var svc = new ROSLIB.Service({ ros:ros, name:msg.service, serviceType:msg.service_type || 'std_srvs/Empty' });
+            svc.callService(new ROSLIB.ServiceRequest(msg.args || {}), function(result) {
+              logExt('[RaaS svc] ' + msg.service + ' → ' + JSON.stringify(result));
+            }, function(err) {
+              logExt('[RaaS svc] ' + msg.service + ' error: ' + err);
+            });
+          }
         // ── New RaaS protocol: {type:"publish", robot_id, topic, msg_type, data} ──
         } else if (msg.type === 'publish' && msg.topic && msg.data !== undefined) {
           var msgType = msg.msg_type || 'std_msgs/String';
