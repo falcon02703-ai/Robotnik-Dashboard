@@ -870,6 +870,13 @@
       var registration = JSON.stringify({ type:'register', client_type:'robot', robot_id:'sec-robot-01' });
       extWS.send(registration);
       logExt('Sent registration: ' + registration);
+
+      // ── Keepalive heartbeat ──
+      extWS._pingInterval = setInterval(function() {
+        if (extWS && extWS.readyState === WebSocket.OPEN) {
+          extWS.send(JSON.stringify({ type: 'ping' }));
+        }
+      }, 5000);
     };
     extWS.onmessage = function(event) {
       try {
@@ -917,6 +924,7 @@
       badge.textContent = 'ERROR'; badge.className = 'ext-ws-status error';
     };
     extWS.onclose = function() {
+      clearInterval(extWS && extWS._pingInterval);
       extWS = null;
       var btn = document.getElementById('ext-ws-btn');
       btn.textContent = 'CONNECT';
