@@ -833,7 +833,7 @@
     el.textContent = '[' + new Date().toLocaleTimeString() + '] ' + msg + '\n' + el.textContent;
   }
   function toggleExternalWS() {
-    if (extWS && extWS.readyState === WebSocket.OPEN) { extWS._intentionalClose = true; extWS.close(); return; }
+    if (extWS && extWS.readyState === WebSocket.OPEN) { extWS.close(); return; }
     var url = document.getElementById('ext-ws-url').value.trim();
     try { extWS = new WebSocket(url); } catch(e) { logExt('ERROR: ' + e.message); return; }
     extWS.onopen = function() {
@@ -845,17 +845,10 @@
       var badge = document.getElementById('ext-ws-header-status');
       badge.textContent = 'CONNECTED'; badge.className = 'ext-ws-status connected';
       logExt('Connected to ' + url);
-      // ── Register with the RaaS server as a dashboard operator ──
+      // ── Register with the RaaS server as a robot ──
       var registration = JSON.stringify({ type:'register', client_type:'robot', robot_id:'sec-robot-01' });
       extWS.send(registration);
       logExt('Sent registration: ' + registration);
-
-      // ── Keepalive heartbeat ──
-      extWS._pingInterval = setInterval(function() {
-        if (extWS && extWS.readyState === WebSocket.OPEN) {
-          extWS.send(JSON.stringify({ type: 'ping', robot_id: 'sec-robot-01' }));
-        }
-      }, 5000);
     };
     extWS.onmessage = function(event) {
       try {
@@ -930,8 +923,6 @@
       badge.textContent = 'ERROR'; badge.className = 'ext-ws-status error';
     };
     extWS.onclose = function() {
-      clearInterval(extWS && extWS._pingInterval);
-      var wasIntentional = extWS && extWS._intentionalClose;
       extWS = null;
       var btn = document.getElementById('ext-ws-btn');
       btn.textContent = 'CONNECT';
@@ -941,16 +932,6 @@
       var badge = document.getElementById('ext-ws-header-status');
       badge.textContent = 'DISCONNECTED'; badge.className = 'ext-ws-status error';
       logExt('Disconnected');
-      if (!wasIntentional) {
-        logExt('Reconnecting in 3s...');
-        setTimeout(function() {
-          var btn = document.getElementById('ext-ws-btn');
-          if (btn.textContent === 'CONNECT') {
-            logExt('Reconnecting...');
-            toggleExternalWS();
-          }
-        }, 3000);
-      }
     };
   }
 
