@@ -1079,18 +1079,11 @@
     var svc = new ROSLIB.Service({
       ros: ros,
       name: '/robot/robot_local_control/NavigationComponent/UnchargeComponent/add',
-      serviceType: 'robot_local_control_msgs/UnchargePetition'
+      serviceType: 'procedures_msgs/ProcedureQuery'
     });
-    var req = new ROSLIB.ServiceRequest({
-      procedure: { charge_station: '' }
-    });
+    var req = new ROSLIB.ServiceRequest({});
     svc.callService(req, function(result) {
       console.log('[Undock] service response:', JSON.stringify(result));
-      // Store the assigned procedure ID so we can cancel it if needed
-      if (result && result.state && result.state.header) {
-        window._undockProcedureId = result.state.header.id;
-        console.log('[Undock] procedure ID:', window._undockProcedureId);
-      }
     }, function(err) {
       console.error('[Undock] service error:', err);
       window._undocking = false;
