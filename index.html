@@ -341,7 +341,7 @@
         </div>
       </div>
       <div class="ext-ws-form">
-        <input id="ext-ws-url" type="text" placeholder="ws://host:port" value="wss://nhb-raas-staging.senserbot.com/security-robot-server/robot">
+        <input id="ext-ws-url" type="text" placeholder="ws://host:port" value="wss://nhb-raas-staging.senserbot.com/security-robot-server/dashboard">
         <button class="btn-connect" id="ext-ws-btn" onclick="toggleExternalWS()">CONNECT</button>
       </div>
       <div id="ext-ws-log">Awaiting external WebSocket connection...</div>
@@ -845,8 +845,8 @@
       var badge = document.getElementById('ext-ws-header-status');
       badge.textContent = 'CONNECTED'; badge.className = 'ext-ws-status connected';
       logExt('Connected to ' + url);
-      // ── Register with the RaaS server as a robot ──
-      var registration = JSON.stringify({ type:'register', client_type:'robot', robot_id:'sec-robot-01' });
+      // ── Register with the RaaS server as a dashboard operator ──
+      var registration = JSON.stringify({ type:'register', client_type:'dashboard', role:'operator' });
       extWS.send(registration);
       logExt('Sent registration: ' + registration);
     };
