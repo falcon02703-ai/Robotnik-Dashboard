@@ -1261,7 +1261,10 @@
       saveBar.style.display = 'flex';
       var now = new Date();
       document.getElementById('det-save-ts').textContent =
-        now.toLocaleTimeString() + '.' + String(now.getMilliseconds()).padStart(3,'0');
+        String(now.getHours()).padStart(2,'0') + ':' +
+        String(now.getMinutes()).padStart(2,'0') + ':' +
+        String(now.getSeconds()).padStart(2,'0') + '.' +
+        String(now.getMilliseconds()).padStart(3,'0');
 
       if (placeholder.style.display !== 'none') {
         placeholder.style.display = 'none';
@@ -1289,7 +1292,11 @@
   function pushDetectionHistory(label) {
     var imgEl = document.getElementById('detection-img');
     var imgSrc = (imgEl && imgEl.style.display !== 'none') ? imgEl.src : null;
-    var time = new Date().toLocaleTimeString();
+    var _n = new Date();
+    var time = String(_n.getHours()).padStart(2,'0') + ':' +
+               String(_n.getMinutes()).padStart(2,'0') + ':' +
+               String(_n.getSeconds()).padStart(2,'0') + '.' +
+               String(_n.getMilliseconds()).padStart(3,'0');
     _alertHistory.unshift({ label: label, time: time, src: imgSrc });
     if (_alertHistory.length > 5) _alertHistory.pop();
     renderDetectionHistory();
