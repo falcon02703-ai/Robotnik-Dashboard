@@ -337,7 +337,7 @@
         </button>
         <button class="btn-undock" id="dock-btn" onclick="triggerDock()" style="display:none;border-color:var(--warn);color:var(--warn);margin-top:6px">
           <span class="undock-spinner" id="dock-spinner"></span>
-          <span id="dock-btn-label">⚓ DOCK ROBOT</span>
+          <span id="dock-btn-label">DOCK ROBOT</span>
         </button>
       </div>
       <div class="teleop-footer">
@@ -776,7 +776,7 @@
           var btn = document.getElementById('dock-btn');
           btn.classList.remove('running');
           btn.disabled = false;
-          document.getElementById('dock-btn-label').textContent = '⚓ DOCK ROBOT';
+          document.getElementById('dock-btn-label').textContent = 'DOCK ROBOT';
         }
         updateDockUI(docked);
         updateNavStatus(); // re-render nav status with updated dock knowledge
@@ -1112,7 +1112,7 @@
     var resetTimer = setTimeout(function() {
       btn.classList.remove('running');
       btn.disabled = false;
-      document.getElementById('dock-btn-label').textContent = '⚓ DOCK ROBOT';
+      document.getElementById('dock-btn-label').textContent = 'DOCK ROBOT';
     }, 30000); // fallback reset after 30s if no contact
     window._dockResetTimer = resetTimer;
   }
