@@ -190,6 +190,8 @@
     .det-thumb-slot .det-thumb-empty{width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--border);font-size:20px}
     .det-thumb-slot .det-thumb-label{position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.7);font-family:var(--font-mono);font-size:9px;color:var(--warn);padding:2px 4px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .det-thumb-slot .det-thumb-time{position:absolute;top:0;right:0;background:rgba(0,0,0,.6);font-family:var(--font-mono);font-size:8px;color:var(--muted);padding:1px 3px}
+    .det-thumb-slot .det-thumb-save{position:absolute;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.55);opacity:0;transition:opacity .15s;cursor:pointer;border:none;width:100%;font-family:var(--font-mono);font-size:10px;color:var(--accent);letter-spacing:1px}
+    .det-thumb-slot:hover .det-thumb-save{opacity:1}
     .det-history-empty{font-family:var(--font-mono);font-size:10px;color:var(--muted);letter-spacing:1px;text-align:center;padding:8px 0}
     /* ── INTRUSION PAGE ── */
     .intrusion-page-inner{padding:16px 28px 54px;display:grid;grid-template-columns:1fr 340px;gap:16px;align-items:start;overflow:hidden}
@@ -1302,7 +1304,8 @@
         slot.innerHTML = entry.src
           ? '<img src="' + entry.src + '" alt="' + entry.label + '">' +
             '<div class="det-thumb-label">' + entry.label + '</div>' +
-            '<div class="det-thumb-time">' + entry.time + '</div>'
+            '<div class="det-thumb-time">' + entry.time + '</div>' +
+            '<button class="det-thumb-save" onclick="saveThumb(' + i + ')" title="Save image">⬇ SAVE</button>'
           : '<div class="det-thumb-empty">·</div>' +
             '<div class="det-thumb-label">' + entry.label + '</div>' +
             '<div class="det-thumb-time">' + entry.time + '</div>';
@@ -1310,6 +1313,18 @@
         slot.innerHTML = '<div class="det-thumb-empty">·</div>';
       }
     }
+  }
+
+  function saveThumb(i) {
+    var entry = _alertHistory[i];
+    if (!entry || !entry.src) return;
+    var ext = entry.src.startsWith('data:image/png') ? 'png' : 'jpg';
+    var safeLabel = (entry.label || 'detection').replace(/[^a-z0-9_-]/gi, '_').toLowerCase();
+    var safeTime  = entry.time.replace(/[^0-9]/g, '');
+    var a = document.createElement('a');
+    a.href = entry.src;
+    a.download = 'detection_' + safeLabel + '_' + safeTime + '.' + ext;
+    a.click();
   }
 
   function saveDetectionFrame() {
