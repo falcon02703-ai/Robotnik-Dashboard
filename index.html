@@ -398,6 +398,10 @@
             <span style="color:var(--border);font-size:10px" id="det-topic-display">/robot/top_ptz_camera/color/image_raw/compressed</span>
           </div>
           <img id="detection-img" alt="Detection feed" style="display:none">
+          <div id="det-save-bar" style="display:none;justify-content:flex-end;align-items:center;gap:10px;padding-top:4px">
+            <span id="det-save-ts" style="font-family:var(--font-mono);font-size:10px;color:var(--muted)"></span>
+            <button class="btn-nav-cancel" onclick="saveDetectionFrame()" style="border-color:var(--accent);color:var(--accent)">⬇ SAVE FRAME</button>
+          </div>
         </div>
       </div>
 
@@ -1250,6 +1254,13 @@
 
       img.src = 'data:image/' + format + ';base64,' + msg.data;
 
+      // Show save bar and update timestamp
+      var saveBar = document.getElementById('det-save-bar');
+      saveBar.style.display = 'flex';
+      var now = new Date();
+      document.getElementById('det-save-ts').textContent =
+        now.toLocaleTimeString() + '.' + String(now.getMilliseconds()).padStart(3,'0');
+
       if (placeholder.style.display !== 'none') {
         placeholder.style.display = 'none';
         img.style.display = 'block';
@@ -1299,6 +1310,24 @@
         slot.innerHTML = '<div class="det-thumb-empty">·</div>';
       }
     }
+  }
+
+  function saveDetectionFrame() {
+    var img = document.getElementById('detection-img');
+    if (!img || !img.src || img.style.display === 'none') return;
+    var now = new Date();
+    var ts = now.getFullYear() +
+      String(now.getMonth()+1).padStart(2,'0') +
+      String(now.getDate()).padStart(2,'0') + '_' +
+      String(now.getHours()).padStart(2,'0') +
+      String(now.getMinutes()).padStart(2,'0') +
+      String(now.getSeconds()).padStart(2,'0') +
+      String(now.getMilliseconds()).padStart(3,'0');
+    var ext = img.src.startsWith('data:image/png') ? 'png' : 'jpg';
+    var a = document.createElement('a');
+    a.href = img.src;
+    a.download = 'detection_' + ts + '.' + ext;
+    a.click();
   }
 
   function clearDetectionHistory() {
