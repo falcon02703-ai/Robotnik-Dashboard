@@ -324,7 +324,7 @@
         <button class="tele-btn" onmousedown="startMoving(0.4,0)"  onmouseup="stopMoving()" onmouseleave="stopMoving()" ontouchstart="startMoving(0.4,0)"  ontouchend="stopMoving()">&#9650;</button>
         <div></div>
         <button class="tele-btn" onmousedown="startMoving(0,0.6)"  onmouseup="stopMoving()" onmouseleave="stopMoving()" ontouchstart="startMoving(0,0.6)"  ontouchend="stopMoving()">&#9664;</button>
-        <button class="tele-btn stop" onmousedown="stopMoving()">STOP</button>
+        <button class="tele-btn stop" onmousedown="stopMoving();stopAll()">STOP</button>
         <button class="tele-btn" onmousedown="startMoving(0,-0.6)" onmouseup="stopMoving()" onmouseleave="stopMoving()" ontouchstart="startMoving(0,-0.6)" ontouchend="stopMoving()">&#9654;</button>
         <div></div>
         <button class="tele-btn" onmousedown="startMoving(-0.4,0)" onmouseup="stopMoving()" onmouseleave="stopMoving()" ontouchstart="startMoving(-0.4,0)" ontouchend="stopMoving()">&#9660;</button>
@@ -985,7 +985,13 @@
     // Zero velocity immediately
     if (cmdVelTopic) cmdVelTopic.publish(new ROSLIB.Message({ linear:{x:0,y:0,z:0}, angular:{x:0,y:0,z:0} }));
 
-    // Cancel all navigation components with id:0 (matches any running procedure on GoToMBF/Move)
+    // Cancel the sequencer and command_manager at the top level first —
+    // without this, the sequencer re-issues navigation goals after RLC cancels
+    var emptyGoalId = new ROSLIB.Message({ stamp: { secs: 0, nsecs: 0 }, id: '' });
+    new ROSLIB.Topic({ ros:ros, name:'/robot/command_sequencer/action/cancel', messageType:'actionlib_msgs/GoalID' }).publish(emptyGoalId);
+    new ROSLIB.Topic({ ros:ros, name:'/robot/command_manager/action/cancel',   messageType:'actionlib_msgs/GoalID' }).publish(emptyGoalId);
+
+    // Also cancel RLC navigation procedures for immediate motion stop
     var genericReq = new ROSLIB.ServiceRequest({
       header: { id: 0, priority: 0, stamp: { secs: 0, nsecs: 0 }, name: 'cancel' }
     });
@@ -1022,7 +1028,6 @@
           onDone();
         }, function(e) { console.warn('[StopAll Uncharge]', e); onDone(); });
     } else {
-      // No undock in progress, still count it as done
       onDone();
     }
   }
