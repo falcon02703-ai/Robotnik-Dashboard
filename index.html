@@ -335,6 +335,10 @@
           <span class="undock-spinner" id="undock-spinner"></span>
           <span id="undock-btn-label">UNDOCK TO ENABLE TELEOP</span>
         </button>
+        <button class="btn-undock" id="dock-btn" onclick="triggerDock()" style="display:none;border-color:var(--warn);color:var(--warn);margin-top:6px">
+          <span class="undock-spinner" id="dock-spinner"></span>
+          <span id="dock-btn-label">⚓ DOCK ROBOT</span>
+        </button>
       </div>
       <div class="teleop-footer">
         <input type="checkbox" id="arrow-key-toggle" onchange="arrowKeysEnabled=this.checked">
@@ -765,6 +769,15 @@
       .subscribe(function(msg) {
         var docked = msg.status && msg.status.contact_relay_status === true;
         window._isDocked = docked;
+        // If we just made contact, clear the dock button fallback reset timer
+        if (docked && window._dockResetTimer) {
+          clearTimeout(window._dockResetTimer);
+          window._dockResetTimer = null;
+          var btn = document.getElementById('dock-btn');
+          btn.classList.remove('running');
+          btn.disabled = false;
+          document.getElementById('dock-btn-label').textContent = '⚓ DOCK ROBOT';
+        }
         updateDockUI(docked);
         updateNavStatus(); // re-render nav status with updated dock knowledge
       });
@@ -1057,17 +1070,51 @@
   function updateDockUI(docked) {
     var badge = document.getElementById('dock-badge');
     var undockBar = document.getElementById('undock-bar');
+    var undockBtn = document.getElementById('undock-btn');
+    var dockBtn = document.getElementById('dock-btn');
     if (docked) {
       badge.textContent = 'DOCKED';
       badge.className = 'dock-status-badge docked';
       undockBar.style.display = 'block';
+      undockBtn.style.display = 'flex';
+      dockBtn.style.display = 'none';
       if (!window._undocking && !window._undockDelay) setTeleopLocked(true);
     } else {
       badge.textContent = 'UNDOCKED';
       badge.className = 'dock-status-badge undocked';
-      if (!window._undocking && !window._undockDelay) undockBar.style.display = 'none';
-      if (!window._undocking && !window._undockDelay) setTeleopLocked(false);
+      if (!window._undocking && !window._undockDelay) {
+        undockBar.style.display = 'block';
+        undockBtn.style.display = 'none';
+        dockBtn.style.display = 'flex';
+        setTeleopLocked(false);
+      }
     }
+  }
+
+  function triggerDock() {
+    if (!ros || !ros.isConnected) { showToast('Not connected to ROS'); return; }
+    var btn = document.getElementById('dock-btn');
+    btn.classList.add('running');
+    btn.disabled = true;
+    document.getElementById('dock-btn-label').textContent = 'DOCKING...';
+    var topic = new ROSLIB.Topic({
+      ros: ros,
+      name: '/robot/command_sequencer/action/goal',
+      messageType: 'robot_simple_command_manager_msgs/RobotSimpleCommandActionGoal'
+    });
+    topic.publish(new ROSLIB.Message({
+      header: { stamp: { secs: 0, nsecs: 0 } },
+      goal_id: { stamp: { secs: 0, nsecs: 0 }, id: 'dock_goal' },
+      goal: { command: { command: 'Charging' } }
+    }));
+    showToast('Docking command sent');
+    // Button resets once docking_status reports contact
+    var resetTimer = setTimeout(function() {
+      btn.classList.remove('running');
+      btn.disabled = false;
+      document.getElementById('dock-btn-label').textContent = '⚓ DOCK ROBOT';
+    }, 30000); // fallback reset after 30s if no contact
+    window._dockResetTimer = resetTimer;
   }
 
   function setTeleopLocked(locked) {
