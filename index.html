@@ -397,7 +397,7 @@
           <div class="detection-placeholder" id="det-placeholder">
             <span class="detection-placeholder-icon">🔍</span>
             <span>AWAITING DETECTION FEED</span>
-            <span style="color:var(--border);font-size:10px" id="det-topic-display">/robot/top_ptz_camera/color/image_raw/compressed</span>
+            <span style="color:var(--border);font-size:10px" id="det-topic-display">/robot/throttle/top_ptz_camera/color/image_raw/compressed</span>
           </div>
           <img id="detection-img" alt="Detection feed" style="display:none">
           <div id="det-save-bar" style="display:none;justify-content:flex-end;align-items:center;gap:10px;padding-top:4px">
@@ -480,7 +480,7 @@
         </div>
         <div class="det-topic-form">
           <label>IMAGE TOPIC</label>
-          <input id="det-topic-input" type="text" value="/robot/top_ptz_camera/color/image_raw/compressed" placeholder="/robot/top_ptz_camera/color/image_raw/compressed">
+          <input id="det-topic-input" type="text" value="/robot/throttle/top_ptz_camera/color/image_raw/compressed" placeholder="/robot/throttle/top_ptz_camera/color/image_raw/compressed">
           <button class="btn-primary" style="margin-top:4px" onclick="resubscribeDetection()">APPLY TOPIC</button>
           <p style="font-family:var(--font-mono);font-size:10px;color:var(--muted);line-height:1.6;margin-top:4px">
             Change this to match the topic published by the AI detection script. Supports sensor_msgs/CompressedImage.
@@ -1231,7 +1231,7 @@
   // ── DETECTION IMAGE FEED ──
   var _detSub = null;
 
-  var DETECTION_TOPIC = '/robot/top_ptz_camera/color/image_raw/compressed';
+  var DETECTION_TOPIC = '/robot/throttle/top_ptz_camera/color/image_raw/compressed';
 
   function initDetectionSubscriber(topic) {
     if (_detSub) { try { _detSub.unsubscribe(); } catch(e) {} _detSub = null; }
