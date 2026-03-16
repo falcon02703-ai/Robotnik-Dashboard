@@ -298,6 +298,15 @@
         <div class="pose-cell"><div class="pose-label">LIN VEL</div><div class="pose-value" id="poseLinVel">--</div></div>
         <div class="pose-cell"><div class="pose-label">ANG VEL</div><div class="pose-value" id="poseAngVel">--</div></div>
         <div class="pose-cell"><div class="pose-label">NAV STATE</div><div class="pose-value" id="navStatus" style="font-size:13px;color:var(--warn)">--</div></div>
+        <div class="pose-cell" style="grid-column:1/-1;padding:10px 14px">
+          <div class="pose-label">BATTERY</div>
+          <div style="display:flex;align-items:center;gap:10px;margin-top:4px">
+            <div style="flex:1;height:8px;background:var(--border);border-radius:2px;overflow:hidden">
+              <div id="batteryBar" style="height:100%;width:0%;background:var(--success);transition:width .5s,background .5s;border-radius:2px"></div>
+            </div>
+            <div class="pose-value" id="batteryPct" style="font-size:16px;min-width:48px;text-align:right">--%</div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -758,6 +767,17 @@
         window._isDocked = docked;
         updateDockUI(docked);
         updateNavStatus(); // re-render nav status with updated dock knowledge
+      });
+
+    // ── BATTERY ──
+    new ROSLIB.Topic({ ros:ros, name:'/robot/battery_estimator/data', messageType:'robotnik_msgs/BatteryStatus' })
+      .subscribe(function(msg) {
+        var pct = Math.round(msg.level);
+        document.getElementById('batteryPct').textContent = pct + '%';
+        var bar = document.getElementById('batteryBar');
+        bar.style.width = pct + '%';
+        bar.style.background = pct > 50 ? 'var(--success)' : pct > 20 ? 'var(--warn)' : 'var(--accent2)';
+        document.getElementById('batteryPct').style.color = pct > 50 ? 'var(--success)' : pct > 20 ? 'var(--warn)' : 'var(--accent2)';
       });
 
     // ── UNCHARGE STATE — true completion: READY after a running procedure ──
