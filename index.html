@@ -772,8 +772,8 @@
     // ── BATTERY ──
     new ROSLIB.Topic({ ros:ros, name:'/robot/battery_estimator/data', messageType:'robotnik_msgs/BatteryStatus' })
       .subscribe(function(msg) {
-        var pct = Math.round(msg.level);
-        document.getElementById('batteryPct').textContent = pct + '%';
+        var pct = parseFloat(msg.level);
+        document.getElementById('batteryPct').textContent = pct.toFixed(2) + '%';
         var bar = document.getElementById('batteryBar');
         bar.style.width = pct + '%';
         bar.style.background = pct > 50 ? 'var(--success)' : pct > 20 ? 'var(--warn)' : 'var(--accent2)';
