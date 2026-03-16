@@ -395,7 +395,7 @@
           <div class="detection-placeholder" id="det-placeholder">
             <span class="detection-placeholder-icon">🔍</span>
             <span>AWAITING DETECTION FEED</span>
-            <span style="color:var(--border);font-size:10px" id="det-topic-display">/robot/detections/image_annotated</span>
+            <span style="color:var(--border);font-size:10px" id="det-topic-display">/robot/top_ptz_camera/color/image_raw/compressed</span>
           </div>
           <img id="detection-img" alt="Detection feed" style="display:none">
         </div>
@@ -449,7 +449,7 @@
           <!-- Alert topic config -->
           <div class="det-alert-topic-form">
             <label>ALERT TOPIC (std_msgs/String)</label>
-            <input id="det-alert-topic-input" type="text" value="/robot/detections/alert" placeholder="/robot/detections/alert">
+            <input id="det-alert-topic-input" type="text" value="/detected_objects" placeholder="/detected_objects">
             <button class="btn-primary" style="margin-top:4px" onclick="applyAlertTopic()">APPLY ALERT TOPIC</button>
           </div>
 
@@ -474,7 +474,7 @@
         </div>
         <div class="det-topic-form">
           <label>IMAGE TOPIC</label>
-          <input id="det-topic-input" type="text" value="/robot/detections/image_annotated" placeholder="/robot/detections/image_annotated">
+          <input id="det-topic-input" type="text" value="/robot/top_ptz_camera/color/image_raw/compressed" placeholder="/robot/top_ptz_camera/color/image_raw/compressed">
           <button class="btn-primary" style="margin-top:4px" onclick="resubscribeDetection()">APPLY TOPIC</button>
           <p style="font-family:var(--font-mono);font-size:10px;color:var(--muted);line-height:1.6;margin-top:4px">
             Change this to match the topic published by the AI detection script. Supports sensor_msgs/CompressedImage.
@@ -1225,7 +1225,7 @@
   // ── DETECTION IMAGE FEED ──
   var _detSub = null;
 
-  var DETECTION_TOPIC = '/robot/detections/image_annotated';
+  var DETECTION_TOPIC = '/robot/top_ptz_camera/color/image_raw/compressed';
 
   function initDetectionSubscriber(topic) {
     if (_detSub) { try { _detSub.unsubscribe(); } catch(e) {} _detSub = null; }
@@ -1271,7 +1271,7 @@
   var _alertClearTimer = null;
   var _alertCount = 0;
   var _alertHistory = [];
-  var ALERT_TOPIC = '/robot/detections/alert';
+  var ALERT_TOPIC = '/detected_objects';
 
   function pushDetectionHistory(label) {
     var imgEl = document.getElementById('detection-img');
