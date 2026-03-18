@@ -1367,11 +1367,12 @@
       var saveBar = document.getElementById('det-save-bar');
       saveBar.style.display = 'flex';
       var now = new Date();
+      var h = now.getHours(), ampm = h >= 12 ? 'PM' : 'AM', h12 = h % 12 || 12;
       document.getElementById('det-save-ts').textContent =
-        String(now.getHours()).padStart(2,'0') + ':' +
+        String(h12).padStart(2,'0') + ':' +
         String(now.getMinutes()).padStart(2,'0') + ':' +
         String(now.getSeconds()).padStart(2,'0') + '.' +
-        String(now.getMilliseconds()).padStart(3,'0');
+        String(now.getMilliseconds()).padStart(3,'0') + ' ' + ampm;
 
       if (placeholder.style.display !== 'none') {
         placeholder.style.display = 'none';
