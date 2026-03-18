@@ -438,7 +438,6 @@
           <span class="panel-title">Past Detections</span>
           <div style="display:flex;align-items:center;gap:8px">
             <span id="det-alert-count" class="panel-badge">Count: 0</span>
-            <button class="btn-nav-cancel" onclick="clearDetectionHistory()">CLEAR</button>
           </div>
         </div>
         <div class="det-thumb-strip" id="det-thumb-strip">
@@ -454,6 +453,31 @@
 
     <!-- SIDEBAR -->
     <div class="detection-sidebar">
+
+      <!-- SESSION LOG -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Session Log</span>
+          <span class="panel-badge" id="session-log-badge">0 detections</span>
+        </div>
+        <div class="session-log-body">
+          <div class="session-log-count-row">
+            <span>DETECTIONS LOGGED</span>
+            <b id="session-log-count">0</b>
+          </div>
+          <div class="session-log-count-row" style="margin-top:-4px">
+            <span>NEW EVENTS</span>
+            <b id="session-event-count" style="color:var(--warn)">0</b>
+          </div>
+          <div class="session-log-warn" id="session-log-warn">
+            ⚠ 150+ detections logged — consider exporting soon
+          </div>
+          <button class="btn-export" id="session-export-btn" onclick="exportSessionLog()" disabled>⬇ EXPORT &amp; CLEAR</button>
+          <p class="session-log-note">
+            Captures every detected frame. <span style="color:var(--warn)">EVENT</span> entries mark the first frame of each new detection. Export downloads a ZIP with all images and a manifest, then clears the log.
+          </p>
+        </div>
+      </div>
 
       <!-- DETECTION ALERT INDICATOR -->
       <div class="panel">
@@ -509,31 +533,6 @@
           <button class="btn-primary" style="margin-top:4px" onclick="resubscribeDetection()">APPLY TOPIC</button>
           <p style="font-family:var(--font-mono);font-size:10px;color:var(--muted);line-height:1.6;margin-top:4px">
             Change this to match the topic published by the AI detection script. Supports sensor_msgs/CompressedImage.
-          </p>
-        </div>
-      </div>
-
-      <!-- SESSION LOG -->
-      <div class="panel">
-        <div class="panel-header">
-          <span class="panel-title">Session Log</span>
-          <span class="panel-badge" id="session-log-badge">0 detections</span>
-        </div>
-        <div class="session-log-body">
-          <div class="session-log-count-row">
-            <span>DETECTIONS LOGGED</span>
-            <b id="session-log-count">0</b>
-          </div>
-          <div class="session-log-count-row" style="margin-top:-4px">
-            <span>NEW EVENTS</span>
-            <b id="session-event-count" style="color:var(--warn)">0</b>
-          </div>
-          <div class="session-log-warn" id="session-log-warn">
-            ⚠ 150+ detections logged — consider exporting soon
-          </div>
-          <button class="btn-export" id="session-export-btn" onclick="exportSessionLog()" disabled>⬇ EXPORT &amp; CLEAR</button>
-          <p class="session-log-note">
-            Captures every detected frame. <span style="color:var(--warn)">EVENT</span> entries mark the first frame of each new detection. Export downloads a ZIP with all images and a manifest, then clears the log.
           </p>
         </div>
       </div>
