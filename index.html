@@ -6,6 +6,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/eventemitter2/lib/eventemitter2.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/roslib/build/roslib.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <style>
     :root {
       --bg:#0a0d10;--surface:#111620;--border:#1e2a38;
@@ -222,6 +223,15 @@
     .intr-badge{font-family:var(--font-mono);font-size:10px;padding:2px 8px;border-radius:2px;background:rgba(255,255,255,.05);color:var(--muted);transition:all .3s}
     .intr-badge.alarmed{color:var(--accent2);background:rgba(255,107,53,.1);animation:pulse 1.2s infinite}
     .intr-badge.clear{color:var(--success);background:rgba(0,255,136,.08)}
+    /* ── SESSION LOG ── */
+    .session-log-body{padding:12px 16px;display:flex;flex-direction:column;gap:10px}
+    .session-log-count-row{display:flex;align-items:center;justify-content:space-between;font-family:var(--font-mono);font-size:11px;color:var(--muted)}
+    .session-log-count-row b{font-size:15px;color:var(--accent)}
+    .session-log-warn{font-family:var(--font-mono);font-size:10px;color:var(--warn);background:rgba(255,214,0,.08);border:1px solid rgba(255,214,0,.3);border-radius:2px;padding:5px 8px;display:none;letter-spacing:.5px;line-height:1.5}
+    .btn-export{width:100%;font-family:var(--font-ui);font-weight:700;font-size:12px;letter-spacing:2px;text-transform:uppercase;padding:9px;background:transparent;border:1px solid var(--accent);color:var(--accent);cursor:pointer;border-radius:2px;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px}
+    .btn-export:hover:not(:disabled){background:var(--accent);color:var(--bg)}
+    .btn-export:disabled{opacity:.35;cursor:not-allowed}
+    .session-log-note{font-family:var(--font-mono);font-size:10px;color:var(--muted);line-height:1.6}
   </style>
 </head>
 <body>
@@ -497,6 +507,31 @@
           <button class="btn-primary" style="margin-top:4px" onclick="resubscribeDetection()">APPLY TOPIC</button>
           <p style="font-family:var(--font-mono);font-size:10px;color:var(--muted);line-height:1.6;margin-top:4px">
             Change this to match the topic published by the AI detection script. Supports sensor_msgs/CompressedImage.
+          </p>
+        </div>
+      </div>
+
+      <!-- SESSION LOG -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Session Log</span>
+          <span class="panel-badge" id="session-log-badge">0 detections</span>
+        </div>
+        <div class="session-log-body">
+          <div class="session-log-count-row">
+            <span>DETECTIONS LOGGED</span>
+            <b id="session-log-count">0</b>
+          </div>
+          <div class="session-log-count-row" style="margin-top:-4px">
+            <span>NEW EVENTS</span>
+            <b id="session-event-count" style="color:var(--warn)">0</b>
+          </div>
+          <div class="session-log-warn" id="session-log-warn">
+            ⚠ 150+ detections logged — consider exporting soon
+          </div>
+          <button class="btn-export" id="session-export-btn" onclick="exportSessionLog()" disabled>⬇ EXPORT &amp; CLEAR</button>
+          <p class="session-log-note">
+            Captures every detected frame. <span style="color:var(--warn)">EVENT</span> entries mark the first frame of each new detection. Export downloads a ZIP with all images and a manifest, then clears the log.
           </p>
         </div>
       </div>
@@ -1360,6 +1395,9 @@
   var _alertCount = 0;
   var _alertHistory = [];
   var ALERT_TOPIC = '/detected_objects';
+  var _sessionLog = [];
+  var _sessionEventCount = 0;
+  var SESSION_WARN_THRESHOLD = 150;
 
   function pushDetectionHistory(label) {
     var imgEl = document.getElementById('detection-img');
@@ -1429,6 +1467,81 @@
     _alertCount = 0;
     document.getElementById('det-alert-count').textContent = 'Count: 0';
     renderDetectionHistory();
+  }
+
+  // ── SESSION LOG ──
+  function addToSessionLog(label, isNewEvent) {
+    var imgEl = document.getElementById('detection-img');
+    var imgSrc = (imgEl && imgEl.style.display !== 'none') ? imgEl.src : null;
+    var now = new Date();
+    var time = String(now.getHours()).padStart(2,'0') + ':' +
+               String(now.getMinutes()).padStart(2,'0') + ':' +
+               String(now.getSeconds()).padStart(2,'0') + '.' +
+               String(now.getMilliseconds()).padStart(3,'0');
+    _sessionLog.push({ label: label, time: time, src: imgSrc, isNewEvent: isNewEvent });
+    if (isNewEvent) _sessionEventCount++;
+    updateSessionLogUI();
+  }
+
+  function updateSessionLogUI() {
+    var count = _sessionLog.length;
+    var countEl = document.getElementById('session-log-count');
+    if (countEl) countEl.textContent = count;
+    var evEl = document.getElementById('session-event-count');
+    if (evEl) evEl.textContent = _sessionEventCount;
+    var badge = document.getElementById('session-log-badge');
+    if (badge) badge.textContent = count + ' detection' + (count !== 1 ? 's' : '');
+    var warn = document.getElementById('session-log-warn');
+    if (warn) warn.style.display = count >= SESSION_WARN_THRESHOLD ? 'block' : 'none';
+    var exportBtn = document.getElementById('session-export-btn');
+    if (exportBtn) exportBtn.disabled = count === 0;
+  }
+
+  async function exportSessionLog() {
+    if (_sessionLog.length === 0) { showToast('No detections to export'); return; }
+    var btn = document.getElementById('session-export-btn');
+    btn.disabled = true;
+    btn.textContent = 'EXPORTING...';
+    try {
+      if (!window.JSZip) throw new Error('JSZip not loaded');
+      var zip = new window.JSZip();
+      var manifest = [];
+      _sessionLog.forEach(function(entry, i) {
+        var idx = String(i + 1).padStart(3, '0');
+        var safeLabel = (entry.label || 'detection').replace(/[^a-z0-9_-]/gi, '_').toLowerCase();
+        var safeTime = entry.time.replace(/[^0-9]/g, '');
+        var filename = idx + '_' + safeTime + '_' + safeLabel + (entry.isNewEvent ? '_EVENT' : '') + '.jpg';
+        if (entry.src) {
+          var base64 = entry.src.split(',')[1];
+          if (base64) zip.file(filename, base64, { base64: true });
+        }
+        manifest.push({ index: i + 1, filename: filename, label: entry.label, time: entry.time, isNewEvent: entry.isNewEvent, hasImage: !!entry.src });
+      });
+      zip.file('manifest.json', JSON.stringify(manifest, null, 2));
+      var now = new Date();
+      var ts = now.getFullYear() +
+        String(now.getMonth()+1).padStart(2,'0') +
+        String(now.getDate()).padStart(2,'0') + '_' +
+        String(now.getHours()).padStart(2,'0') +
+        String(now.getMinutes()).padStart(2,'0') +
+        String(now.getSeconds()).padStart(2,'0');
+      var blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } });
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'detections_' + ts + '.zip';
+      a.click();
+      setTimeout(function() { URL.revokeObjectURL(a.href); }, 10000);
+      var exported = _sessionLog.length;
+      _sessionLog = [];
+      _sessionEventCount = 0;
+      updateSessionLogUI();
+      showToast('Exported ' + exported + ' detections — log cleared');
+    } catch(e) {
+      showToast('Export failed: ' + e.message);
+      console.error('[SessionLog Export]', e);
+    }
+    btn.disabled = _sessionLog.length === 0;
+    btn.textContent = '⬇ EXPORT & CLEAR';
   }
 
   function setAlertState(state, label) {
@@ -1505,6 +1618,7 @@
       var wasAlreadyDetected = document.getElementById('det-alert-indicator').classList.contains('detected');
       setAlertState('detected', label);
       if (!wasAlreadyDetected) pushDetectionHistory(label);
+      addToSessionLog(label, !wasAlreadyDetected);
 
       // Auto-clear after N seconds
       var secs = parseInt(document.getElementById('det-clear-secs').value, 10) || 5;
@@ -1520,9 +1634,12 @@
     if (!topic) { showToast('Enter an alert topic name'); return; }
     _alertCount = 0;
     _alertHistory = [];
+    _sessionLog = [];
+    _sessionEventCount = 0;
     document.getElementById('det-alert-count').textContent = 'Count: 0';
     document.getElementById('det-alert-last-seen').textContent = 'Last detection: --';
     renderDetectionHistory();
+    updateSessionLogUI();
     initAlertSubscriber(topic);
     showToast('Alert subscribed to ' + topic);
   }
