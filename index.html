@@ -1146,7 +1146,7 @@
     topic.publish(new ROSLIB.Message({
       header: { stamp: { secs: 0, nsecs: 0 } },
       goal_id: { stamp: { secs: 0, nsecs: 0 }, id: 'dock_goal' },
-      goal: { command: { command: 'Charging' } }
+      goal: { command: { command: 'charge' } }
     }));
     showToast('Docking command sent');
     // Button resets once docking_status reports contact
